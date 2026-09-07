@@ -137,3 +137,8 @@ The shared task registry is allowed for prototype task bookkeeping only. `Determ
 The local FastAPI dashboard owns one `DashboardEngine` clock and exposes serialized snapshots over REST and WebSocket. It may select a prebuilt scenario, reset the demo, and request destination-only tasks through the existing task lifecycle. It has no API for traffic decisions: no conflict winner, yielding, corridor ownership, deadlock resolution, or path selection endpoint exists. `RobotAgent` continues to make those decisions from local state and peer messages.
 
 Start it on Windows with `scripts\\start_dashboard.bat`, or run `python scripts/run_dashboard.py`, then open `http://127.0.0.1:8000`.
+## Demo controller versus traffic controller
+
+`DemoController` is an operator-facing deterministic clock and environment adapter. Scenario load and restart are paused by default; play, pause, single-step, and speed alter only when logical ticks are applied. Pausing freezes robot motion and simulated heartbeats together, while WebSocket snapshots remain available. Failure and obstacle controls mutate physical environment inputs, and task controls use the shared lifecycle registry.
+
+The controller never invokes conflict detection/resolution, corridor ownership, yield selection, deadlock recovery, or A*. Robot-local outcomes and reasons are exposed through read-only `coordination_decisions()` and `active_conflict_markers()` views. The dashboard renders those facts without recomputing a winner.

@@ -46,6 +46,7 @@ class RobotAgent:
     _pending_yield_destination: Cell | None = field(default=None, init=False)
     _active_conflict_signatures: set[tuple[object, ...]] = field(default_factory=set, init=False)
     _winner_by_peer: dict[str, str | None] = field(default_factory=dict, init=False)
+    _resolution_reason_by_peer: dict[str, str] = field(default_factory=dict, init=False)
     _waiting_for_corridor: str | None = field(default=None, init=False)
     _corridor_owner_by_id: dict[str, str | None] = field(default_factory=dict, init=False)
     _blocked_by_peer_ids: tuple[str, ...] = field(default=(), init=False)
@@ -76,6 +77,7 @@ class RobotAgent:
         offline = self.local_world_model.expire_stale_peers(current_time)
         for peer_id in offline:
             self._winner_by_peer.pop(peer_id, None)
+            self._resolution_reason_by_peer.pop(peer_id, None)
             self._active_conflict_signatures = {
                 signature for signature in self._active_conflict_signatures
                 if peer_id not in signature
@@ -109,7 +111,7 @@ class RobotAgent:
     def assign_goal(self, goal: Cell) -> None:
         if self.state not in {RobotState.IDLE, RobotState.TASK_COMPLETE}: raise RuntimeError(f"Robot {self.robot_id} cannot accept a goal while {self.state.name}.")
         self.goal = goal; self.path = (); self._path_index = 0; self.velocity = (0, 0); self.intent = None; self.waiting_ticks = 0
-        self._winner_by_peer.clear(); self._active_conflict_signatures.clear(); self._waiting_for_corridor = None; self._blocked_by_peer_ids = (); self.corridor_requests = (); self.corridor_tokens = ()
+        self._winner_by_peer.clear(); self._resolution_reason_by_peer.clear(); self._active_conflict_signatures.clear(); self._waiting_for_corridor = None; self._blocked_by_peer_ids = (); self.corridor_requests = (); self.corridor_tokens = ()
         self.state = RobotState.PLANNING; self._refresh_own_state(self._last_timestamp)
 
     def decide_next_move(self, grid: WarehouseGrid | None = None) -> Cell | None:
@@ -157,6 +159,12 @@ class RobotAgent:
     def detect_conflicts(self) -> tuple[Conflict, ...]: return self.conflict_detector.detect(self.local_world_model)
     def resolve_conflict(self, conflict: Conflict) -> ConflictResolution: return self.conflict_resolver.resolve_from_local_world(conflict, self.local_world_model)
     def known_winner_for(self, peer_id: str) -> str | None: return self._winner_by_peer.get(peer_id)
+    def coordination_decisions(self) -> tuple[dict[str, str | None], ...]:
+        """Expose this robot's cached local outcomes for read-only observability."""
+        return tuple({"peer_robot_id": peer_id, "winner_robot_id": winner_id, "local_decision": "PROCEED" if winner_id == self.robot_id else "YIELD", "reason": self._resolution_reason_by_peer.get(peer_id, "UNKNOWN")} for peer_id, winner_id in sorted(self._winner_by_peer.items()))
+    def active_conflict_markers(self) -> tuple[dict[str, object], ...]:
+        """Expose normalized active conflicts without granting dashboard control."""
+        return tuple({"conflict_type": signature[0].name, "robot_ids": signature[1], "cell": signature[2]} for signature in sorted(self._active_conflict_signatures, key=str))
     def known_corridor_owner_for(self, corridor_id: str) -> str | None: return self._corridor_owner_by_id.get(corridor_id)
     @property
     def deadlock_events(self) -> tuple[DeadlockEvent, ...]: return tuple(self.deadlock_manager.events)
@@ -244,11 +252,11 @@ class RobotAgent:
         for conflict in conflicts:
             peer=next(r for r in conflict.robot_ids if r != self.robot_id); by_peer.setdefault(peer,[]).append(conflict)
         for peer in tuple(self._winner_by_peer):
-            if peer not in by_peer: del self._winner_by_peer[peer]
+            if peer not in by_peer: del self._winner_by_peer[peer]; self._resolution_reason_by_peer.pop(peer, None)
         losing=[]
         for peer in sorted(by_peer):
             if peer not in self._winner_by_peer:
-                result=self.resolve_conflict(by_peer[peer][0]); self._winner_by_peer[peer]=result.winner_id
+                result=self.resolve_conflict(by_peer[peer][0]); self._winner_by_peer[peer]=result.winner_id; self._resolution_reason_by_peer[peer]=result.reason.name
                 if result.winner_id == self.robot_id: self.conflict_metrics.conflicts_won += 1
                 else: self.conflict_metrics.conflicts_lost += 1
             if self._winner_by_peer[peer] != self.robot_id: losing.extend(by_peer[peer])

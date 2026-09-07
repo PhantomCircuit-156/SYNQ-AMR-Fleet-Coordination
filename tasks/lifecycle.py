@@ -5,6 +5,7 @@ from enum import Enum
 from typing import Iterable, Protocol
 from models.grid import Cell
 from models.robot_state import RobotState
+from models.priority import TaskPriority
 
 class TaskStatus(str, Enum):
     PENDING="PENDING"; ASSIGNED="ASSIGNED"; IN_PROGRESS="IN_PROGRESS"; COMPLETED="COMPLETED"; RELEASED="RELEASED"
@@ -23,6 +24,7 @@ class FleetTask:
     status: TaskStatus=TaskStatus.PENDING
     assigned_robot_id: str|None=None
     release_count: int=0
+    priority: TaskPriority=TaskPriority.NORMAL
 class TaskRobot(Protocol):
     robot_id: str; position: Cell; state: RobotState; enabled: bool
     local_world_model: object
@@ -38,7 +40,7 @@ class DeterministicTaskDispatcher:
     def assign_initial(self, task_id: str, robot: TaskRobot) -> None:
         task=self.tasks[task_id]
         if task.status is not TaskStatus.PENDING: raise RuntimeError("Task is not pending.")
-        robot.assign_goal(task.goal); task.assigned_robot_id=robot.robot_id; task.status=TaskStatus.ASSIGNED
+        robot.priority=task.priority; robot.assign_goal(task.goal); task.assigned_robot_id=robot.robot_id; task.status=TaskStatus.ASSIGNED
     def update(self, robots: Iterable[TaskRobot], timestamp: int) -> None:
         robot_by_id={r.robot_id:r for r in robots}
         for task in sorted(self.tasks.values(),key=lambda t:t.task_id):
@@ -55,7 +57,7 @@ class DeterministicTaskDispatcher:
                 candidates=[r for r in robot_by_id.values() if r.enabled and r.state in {RobotState.IDLE,RobotState.TASK_COMPLETE}]
                 if candidates:
                     winner=min(candidates,key=lambda r:(abs(r.position.x-task.goal.x)+abs(r.position.y-task.goal.y),r.robot_id))
-                    winner.assign_goal(task.goal); task.assigned_robot_id=winner.robot_id; task.status=TaskStatus.ASSIGNED
+                    winner.priority=task.priority; winner.assign_goal(task.goal); task.assigned_robot_id=winner.robot_id; task.status=TaskStatus.ASSIGNED
                     self.events.append(TaskEvent(TaskEventType.TASK_REASSIGNED,task.task_id,timestamp,winner.robot_id))
     @staticmethod
     def _reported_offline(robot_id: str, robots: Iterable[TaskRobot]) -> bool:

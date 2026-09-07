@@ -52,3 +52,6 @@ Run `python -m scripts.run_offline_blockage_scenario`. An offline R2 remains a p
 ## Local dashboard
 
 Install project dependencies, then run `python scripts/run_dashboard.py` and open `http://127.0.0.1:8000`. The dashboard streams the single active simulator over WebSocket and provides real scenario controls for basic, intersection, corridor, deadlock, robot failure, and offline physical blockage.
+### Controlled SIH presentation
+
+The dashboard now loads every judge-facing scenario paused. Use Play/Pause/Step, 0.25×–4× speed, deterministic restart/next controls, environment fault injection, map-cell obstacle/task selection, visualization layers, and event filters. See `docs/DEMO_GUIDE.md` for the recommended presentation flow.

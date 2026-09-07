@@ -61,6 +61,15 @@ class FleetSimulation:
         robot.disable()
         self.physical_obstacles.add(robot.position)
 
+    def add_dynamic_obstacle(self, cell: Cell) -> None:
+        if not self.grid.is_walkable(cell): raise ValueError("Dynamic obstacle must be placed on walkable floor.")
+        if cell in {robot.position for robot in self.robots}: raise ValueError("Dynamic obstacle cannot overlap a robot.")
+        self.physical_obstacles.add(cell)
+
+    def remove_dynamic_obstacle(self, cell: Cell) -> None:
+        if cell in {robot.position for robot in self.robots if not robot.enabled}: raise ValueError("An offline robot's occupied cell cannot be removed as an obstacle.")
+        self.physical_obstacles.discard(cell)
+
     def step(self) -> None:
         """Advance one tick using moves selected by independent robot agents."""
         for robot in self.robots:
