@@ -120,3 +120,8 @@ remaining starvation limitation is that strict HIGH task priority can repeatedly
 beat NORMAL work. Also, a live owner that keeps refreshing its lease while making
 no progress inside a corridor is not yet expired by a progress watchdog; the
 current offline timeout only handles missing heartbeats.
+## Peer liveness and task reassignment
+
+Every active `RobotAgent` publishes its heartbeat in `PeerStateMessage`. Each peer stores `peer_last_seen` in its own `LocalWorldModel` and applies the shared `HEARTBEAT_TIMEOUT` against its local simulation clock. On timeout, that observer marks the peer offline and removes the peer's state, intent/path reservation, corridor requests, and corridor tokens. Conflict and corridor decisions therefore automatically reconsider the remaining fresh peer data. `FleetSimulation.disable_robot` is fault injection only; it does not mark that robot offline in any peer model.
+
+`DeterministicTaskDispatcher` is logically separate from motion coordination. It may create, release, and assign work after consuming robot-reported offline status. It cannot select paths, resolve conflicts, grant corridor ownership, or command yielding. Assignment uses distance to the task goal followed by robot ID as a stable tie-break. In short: **task dispatch is not traffic coordination**.

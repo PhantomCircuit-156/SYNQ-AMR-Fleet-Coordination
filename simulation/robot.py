@@ -31,6 +31,7 @@ class RobotAgent:
     intent: Intent | None = field(default=None, init=False)
     waiting_ticks: int = field(default=0, init=False)
     safety_clear: bool = field(default=True, init=False)
+    enabled: bool = field(default=True, init=False)
     local_world_model: LocalWorldModel = field(init=False)
     intent_manager: IntentManager = field(init=False)
     conflict_detector: ConflictDetector = field(init=False)
@@ -59,6 +60,31 @@ class RobotAgent:
         self.deadlock_manager = DeadlockManager(self.robot_id)
         self._refresh_own_state(0)
 
+    def disable(self) -> None:
+        """Simulate loss of this robot; it stops moving and publishing."""
+        self.enabled = False
+        self.state = RobotState.OFFLINE
+        self.velocity = (0, 0)
+        self.intent = None
+        self.corridor_requests = ()
+        self.corridor_tokens = ()
+        self._refresh_own_state(self._last_timestamp)
+
+    def evaluate_peer_liveness(self, current_time: int) -> tuple[str, ...]:
+        """Expire stale peers independently using this robot's local clock."""
+        self._last_timestamp = current_time
+        offline = self.local_world_model.expire_stale_peers(current_time)
+        for peer_id in offline:
+            self._winner_by_peer.pop(peer_id, None)
+            self._active_conflict_signatures = {
+                signature for signature in self._active_conflict_signatures
+                if peer_id not in signature
+            }
+            for corridor_id, owner_id in tuple(self._corridor_owner_by_id.items()):
+                if owner_id == peer_id:
+                    del self._corridor_owner_by_id[corridor_id]
+        return offline
+
     def attach_static_map(self, grid: WarehouseGrid) -> None: self.local_world_model.set_static_map(grid)
     def attach_corridor_regions(self, regions: tuple[CorridorRegion, ...]) -> None: self.local_world_model.set_corridor_regions(regions)
 
@@ -76,6 +102,7 @@ class RobotAgent:
         self.state = RobotState.PLANNING; self._refresh_own_state(self._last_timestamp)
 
     def decide_next_move(self, grid: WarehouseGrid | None = None) -> Cell | None:
+        if not self.enabled: return None
         if self.local_world_model.static_map is None:
             if grid is None: raise RuntimeError("Robot has no static map knowledge.")
             self.attach_static_map(grid)
@@ -106,6 +133,7 @@ class RobotAgent:
         self._refresh_intent(self._last_timestamp); self._refresh_own_state(self._last_timestamp)
 
     def publish_state(self, bus: InProcessPeerMessageBus, timestamp: int) -> PeerStateMessage:
+        if not self.enabled: raise RuntimeError("An offline robot cannot publish a heartbeat.")
         self._last_timestamp = timestamp; self._refresh_intent(timestamp); self._refresh_corridor_advertisements(timestamp)
         message = self._build_state_message(timestamp); self.local_world_model.update_own_state(message); bus.publish(message); return message
     def receive_peer_messages(self, bus: InProcessPeerMessageBus) -> int: return sum(self.local_world_model.receive_peer_state(m) for m in bus.drain(self.robot_id))

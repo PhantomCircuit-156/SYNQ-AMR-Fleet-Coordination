@@ -9,6 +9,7 @@ from models.grid import Cell, WarehouseGrid
 from models.robot_state import RobotState
 from networking.peer_bus import InProcessPeerMessageBus
 from simulation.robot import RobotAgent
+from tasks.lifecycle import DeterministicTaskDispatcher, TaskStatus
 
 
 class CollisionDetectedError(RuntimeError):
@@ -27,6 +28,7 @@ class FleetSimulation:
     grid: WarehouseGrid
     robots: tuple[RobotAgent, ...]
     corridor_regions: tuple[CorridorRegion, ...] = ()
+    task_dispatcher: DeterministicTaskDispatcher | None = None
     tick_count: int = field(default=0, init=False)
     collision_count: int = field(default=0, init=False)
     position_history: dict[str, list[Cell]] = field(default_factory=dict, init=False)
@@ -50,21 +52,27 @@ class FleetSimulation:
             self.position_history[robot.robot_id] = [robot.position]
         self._record_tick_snapshot()
 
+    def disable_robot(self, robot_id: str) -> None:
+        """Environment fault injection only; peers infer failure from heartbeats."""
+        robot = next((item for item in self.robots if item.robot_id == robot_id), None)
+        if robot is None:
+            raise KeyError(robot_id)
+        robot.disable()
+
     def step(self) -> None:
         """Advance one tick using moves selected by independent robot agents."""
         for robot in self.robots:
-            robot.receive_peer_messages(self.message_bus)
-        proposals = {
-            robot.robot_id: robot.decide_next_move()
-            for robot in self.robots
-        }
+            if robot.enabled:
+                robot.receive_peer_messages(self.message_bus)
+                robot.evaluate_peer_liveness(self.tick_count)
+        if self.task_dispatcher is not None:
+            self.task_dispatcher.update(self.robots, self.tick_count)
+        proposals = {robot.robot_id: robot.decide_next_move() for robot in self.robots}
         self._reject_physical_collisions(proposals)
-
         for robot in self.robots:
             destination = proposals[robot.robot_id]
             if destination is not None:
                 self.grid.validate_move(robot.position, destination)
-
         for robot in self.robots:
             destination = proposals[robot.robot_id]
             if destination is not None:
@@ -72,12 +80,16 @@ class FleetSimulation:
                 self.position_history[robot.robot_id].append(destination)
         self.tick_count += 1
         for robot in self.robots:
-            robot.publish_state(self.message_bus, timestamp=self.tick_count)
+            if robot.enabled:
+                robot.publish_state(self.message_bus, timestamp=self.tick_count)
+        if self.task_dispatcher is not None:
+            self.task_dispatcher.update(self.robots, self.tick_count)
         self._record_tick_snapshot()
-
     def run_until_complete(self, max_ticks: int = 1_000) -> None:
         for _ in range(max_ticks):
-            if all(robot.state is RobotState.TASK_COMPLETE for robot in self.robots):
+            active_complete = all(not robot.enabled or robot.state in {RobotState.IDLE, RobotState.TASK_COMPLETE} for robot in self.robots)
+            tasks_complete = self.task_dispatcher is None or all(task.status is TaskStatus.COMPLETED for task in self.task_dispatcher.tasks.values())
+            if active_complete and tasks_complete:
                 return
             self.step()
         raise TimeoutError(f"Fleet did not complete within {max_ticks} ticks.")

@@ -14,3 +14,4 @@ class RobotState(Enum):
     WAITING = auto()
     TASK_COMPLETE = auto()
     UNREACHABLE = auto()
+    OFFLINE = auto()

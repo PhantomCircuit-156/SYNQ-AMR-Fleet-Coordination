@@ -43,3 +43,6 @@ Run the three-robot visual simulator (after installing dependencies):
 ```
 
 Use `--headless` for a console-only validation run.
+### Peer failure demo
+
+Run `python -m scripts.run_failure_scenario` to disable R2 deliberately, observe independent heartbeat timeouts, release its unfinished task once, and deterministically reassign it while traffic decisions remain robot-local.
