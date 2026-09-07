@@ -132,3 +132,8 @@ Heartbeat timeout is a communication-state change, not physical removal. When th
 Liveness events are intentionally local observations. R1 and R3 may each emit one `HEARTBEAT_TIMEOUT` and one `ROBOT_OFFLINE` event for R2. Each event carries `observer_robot_id` and `peer_robot_id`, so a future dashboard can distinguish local observations from fleet summaries.
 
 The shared task registry is allowed for prototype task bookkeeping only. `DeterministicTaskDispatcher` releases a task only when its status is `ASSIGNED` or `IN_PROGRESS`, then immediately changes it to `RELEASED`; subsequent peer observations cannot satisfy that transition again. It assigns one deterministic winner and changes status back to `ASSIGNED`. It has no traffic-control API.
+## Live dashboard
+
+The local FastAPI dashboard owns one `DashboardEngine` clock and exposes serialized snapshots over REST and WebSocket. It may select a prebuilt scenario, reset the demo, and request destination-only tasks through the existing task lifecycle. It has no API for traffic decisions: no conflict winner, yielding, corridor ownership, deadlock resolution, or path selection endpoint exists. `RobotAgent` continues to make those decisions from local state and peer messages.
+
+Start it on Windows with `scripts\\start_dashboard.bat`, or run `python scripts/run_dashboard.py`, then open `http://127.0.0.1:8000`.

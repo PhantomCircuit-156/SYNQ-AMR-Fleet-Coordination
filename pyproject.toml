@@ -10,10 +10,10 @@ readme = "README.md"
 requires-python = ">=3.11"
 license = { text = "Proprietary" }
 authors = [{ name = "SYNQ Team" }]
-dependencies = ["pygame>=2.5"]
+dependencies = ["pygame>=2.5", "fastapi>=0.115", "uvicorn[standard]>=0.30"]
 
 [project.optional-dependencies]
-dev = ["pytest>=8.0"]
+dev = ["pytest>=8.0", "httpx>=0.27"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]

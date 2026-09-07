@@ -49,3 +49,6 @@ Run `python -m scripts.run_failure_scenario` to disable R2 deliberately, observe
 ### Offline physical-blockage demo
 
 Run `python -m scripts.run_offline_blockage_scenario`. An offline R2 remains a physical obstacle, while R1 locally replans around it without a traffic-controller decision.
+## Local dashboard
+
+Install project dependencies, then run `python scripts/run_dashboard.py` and open `http://127.0.0.1:8000`. The dashboard streams the single active simulator over WebSocket and provides real scenario controls for basic, intersection, corridor, deadlock, robot failure, and offline physical blockage.
