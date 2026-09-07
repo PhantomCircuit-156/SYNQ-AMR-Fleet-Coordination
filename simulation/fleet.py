@@ -35,6 +35,7 @@ class FleetSimulation:
     occupancy_history: list[dict[str, Cell]] = field(default_factory=list, init=False)
     state_history: list[dict[str, RobotState]] = field(default_factory=list, init=False)
     message_bus: InProcessPeerMessageBus = field(default_factory=InProcessPeerMessageBus, init=False)
+    physical_obstacles: set[Cell] = field(default_factory=set, init=False)
 
     def __post_init__(self) -> None:
         robot_ids = [robot.robot_id for robot in self.robots]
@@ -58,11 +59,13 @@ class FleetSimulation:
         if robot is None:
             raise KeyError(robot_id)
         robot.disable()
+        self.physical_obstacles.add(robot.position)
 
     def step(self) -> None:
         """Advance one tick using moves selected by independent robot agents."""
         for robot in self.robots:
             if robot.enabled:
+                robot.observe_dynamic_obstacles(self.physical_obstacles)
                 robot.receive_peer_messages(self.message_bus)
                 robot.evaluate_peer_liveness(self.tick_count)
         if self.task_dispatcher is not None:
@@ -73,6 +76,8 @@ class FleetSimulation:
             destination = proposals[robot.robot_id]
             if destination is not None:
                 self.grid.validate_move(robot.position, destination)
+                if destination in self.physical_obstacles:
+                    self._record_collision("A robot selected a physically occupied offline cell.")
         for robot in self.robots:
             destination = proposals[robot.robot_id]
             if destination is not None:
@@ -98,6 +103,7 @@ class FleetSimulation:
         return {
             "ticks": self.tick_count,
             "collisions": self.collision_count,
+            "physical_obstacles": tuple(sorted(self.physical_obstacles)),
             "robots": {
                 robot.robot_id: robot.conflict_metrics.as_dict()
                 for robot in self.robots

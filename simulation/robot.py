@@ -85,6 +85,17 @@ class RobotAgent:
                     del self._corridor_owner_by_id[corridor_id]
         return offline
 
+    def observe_dynamic_obstacles(self, obstacles: set[Cell]) -> None:
+        """Receive environment occupancy observations; route choice remains local."""
+        self.local_world_model.known_dynamic_obstacles = set(obstacles)
+
+    def _planning_grid(self) -> WarehouseGrid:
+        static_map = self.local_world_model.static_map
+        if static_map is None: raise RuntimeError("Robot has no static map knowledge.")
+        return WarehouseGrid(static_map.width, static_map.height, frozenset(set(static_map.obstacles) | self.local_world_model.known_dynamic_obstacles))
+
+    def _remaining_path_is_blocked(self) -> bool:
+        return any(cell in self.local_world_model.known_dynamic_obstacles for cell in self.path[self._path_index + 1:])
     def attach_static_map(self, grid: WarehouseGrid) -> None: self.local_world_model.set_static_map(grid)
     def attach_corridor_regions(self, regions: tuple[CorridorRegion, ...]) -> None: self.local_world_model.set_corridor_regions(regions)
 
@@ -106,13 +117,19 @@ class RobotAgent:
         if self.local_world_model.static_map is None:
             if grid is None: raise RuntimeError("Robot has no static map knowledge.")
             self.attach_static_map(grid)
-        local_map = self.local_world_model.static_map
-        if self.state in {RobotState.IDLE, RobotState.TASK_COMPLETE}: return None
+        if self.state in {RobotState.IDLE, RobotState.TASK_COMPLETE, RobotState.UNREACHABLE}: return None
         if self.goal is None: raise RuntimeError("A non-idle robot must have a goal.")
-        if self.state is RobotState.PLANNING:
-            path = self.planner.plan(local_map, self.position, self.goal)
-            if path is None: raise RuntimeError(f"Robot {self.robot_id} cannot reach goal {self.goal}.")
-            self.path = path; self._path_index = 0; self.state = RobotState.TASK_COMPLETE if len(path) == 1 else RobotState.MOVING
+        if self.state in {RobotState.PLANNING, RobotState.REPLANNING}:
+            replanning = self.state is RobotState.REPLANNING
+            path = self.planner.plan(self._planning_grid(), self.position, self.goal)
+            if path is None:
+                self.state = RobotState.UNREACHABLE; self.velocity = (0, 0); self.conflict_metrics.no_route_stops += 1
+            else:
+                self.path = path; self._path_index = 0; self.state = RobotState.TASK_COMPLETE if len(path) == 1 else RobotState.MOVING
+                if replanning: self.conflict_metrics.replans_succeeded += 1
+            self._refresh_intent(self._last_timestamp); self._refresh_own_state(self._last_timestamp); return None
+        if self._remaining_path_is_blocked():
+            self.state = RobotState.REPLANNING; self.velocity = (0, 0); self.conflict_metrics.replans_requested += 1
             self._refresh_intent(self._last_timestamp); self._refresh_own_state(self._last_timestamp); return None
         for evaluator in (self._evaluate_deadlock_before_motion, self._evaluate_corridor_before_motion, self._evaluate_conflicts_before_motion):
             blocked, move = evaluator()
@@ -190,7 +207,7 @@ class RobotAgent:
     def _step_toward_passing_bay(self, bay: Cell | None) -> Cell | None:
         grid = self.local_world_model.static_map
         if bay is None or grid is None or bay == self.position: return None
-        route = self.planner.plan(grid, self.position, bay)
+        route = self.planner.plan(self._planning_grid(), self.position, bay)
         if route is None or len(route) < 2: return None
         destination = route[1]
         return None if destination in {s.pose for s in self.local_world_model.peer_states.values()} else destination
@@ -259,7 +276,7 @@ class RobotAgent:
     @staticmethod
     def _conflict_signature(conflict: Conflict) -> tuple[object,...]: return (conflict.conflict_type,conflict.robot_ids,conflict.cell)
     def _refresh_intent(self,timestamp:int) -> None:
-        if self.state is RobotState.WAITING:self.intent=self.intent_manager.generate_hold(self.robot_id,self.position,timestamp)
+        if self.state in {RobotState.WAITING, RobotState.REPLANNING, RobotState.UNREACHABLE}:self.intent=self.intent_manager.generate_hold(self.robot_id,self.position,timestamp)
         elif self.path:self.intent=self.intent_manager.generate(self.robot_id,self.path,self._path_index,timestamp)
         else:self.intent=None
     def _refresh_own_state(self,timestamp:int)->None:self.local_world_model.update_own_state(self._build_state_message(timestamp))

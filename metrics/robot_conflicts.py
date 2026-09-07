@@ -21,6 +21,9 @@ class RobotConflictMetrics:
     deadlocks_detected: int = 0
     deadlocks_resolved: int = 0
     deadlocks_cleared: int = 0
+    replans_requested: int = 0
+    replans_succeeded: int = 0
+    no_route_stops: int = 0
 
     def record_conflict(self, conflict_type: str) -> None:
         self.predicted_conflicts += 1
@@ -42,4 +45,7 @@ class RobotConflictMetrics:
             "deadlocks_detected": self.deadlocks_detected,
             "deadlocks_resolved": self.deadlocks_resolved,
             "deadlocks_cleared": self.deadlocks_cleared,
+            "replans_requested": self.replans_requested,
+            "replans_succeeded": self.replans_succeeded,
+            "no_route_stops": self.no_route_stops,
         }
