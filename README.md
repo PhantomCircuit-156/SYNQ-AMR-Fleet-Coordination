@@ -1,57 +1,37 @@
-# SYNQ — Distributed AMR Fleet Coordination
+# SYNQ — Decentralized Multi-AMR Coordination
 
-SYNQ is a Smart India Hackathon 2026 prototype for **SIH26123 — Edge-AI Based Distributed Fleet Coordination for AMRs**. It will demonstrate at least three autonomous mobile robots navigating a dynamic warehouse through decentralized coordination.
+SYNQ is a Python 3.11+ Smart India Hackathon 2026 prototype for **SIH26123 — Edge-AI Based Distributed Fleet Coordination for AMRs**. It demonstrates three autonomous mobile robots operating in a warehouse digital twin without a central traffic controller.
 
-## Status
+## Implemented prototype
 
-The implemented prototype includes deterministic 4-connected A*, three-robot simulation, Pygame visualization, robot-owned local world models, intent-based conflict handling, distributed leased corridor ownership, passing-bay yielding, and mutual-wait deadlock recovery. Each robot decides from its own state plus peer messages; the simulator does not assign right-of-way. Human safety, general dynamic replanning, failure reassignment, and the dashboard are not implemented yet.
+Each `RobotAgent` owns its planner, local world model, intent generation, conflict detection/resolution, corridor protocol, deadlock recovery, liveness view, state, and metrics. The prototype includes deterministic A*, intent-based same-cell/head-on/intersection handling, leased corridor ownership, deadlock backoff, dynamic replanning, heartbeat failure detection, task release/reassignment, payload missions, capacity-aware deterministic allocation, dwell/load phases, battery telemetry, and a FastAPI/WebSocket operator dashboard.
 
-Run the current demonstration with:
+The simulator advances time and rejects invalid physical occupancy. It never grants right-of-way. The dashboard creates missions and injects environment/demo inputs; it never selects a path, winner, yielding robot, or corridor owner.
 
-```powershell
-.\.venv\Scripts\python.exe -m scripts.run_single_robot
-```
-
-## Architectural commitment
-
-There is no central traffic brain. Each robot will independently own and execute its `LocalWorldModel`, `LocalPlanner`, `IntentManager`, `PeerCommunication`, `ConflictDetector`, `ConflictResolver`, `PriorityManager`, `SafetyManager`, `DeadlockManager`, `StateMachine`, and `Metrics` responsibilities. The simulator advances the physical world only; the dashboard observes it and creates tasks only.
-
-## Planned layout
-
-See [architecture](docs/ARCHITECTURE.md), the [implementation plan](docs/IMPLEMENTATION_PLAN.md), and [demo requirements](docs/DEMO_REQUIREMENTS.md).
-
-## Development target
-
-- Python 3.11+
-- Windows
-- `pytest` for automated verification
-- Pygame and FastAPI/WebSockets are planned for later phases, not installed during bootstrap
-
-## Getting started (when implementation begins)
+## Start the product demo on Windows
 
 ```powershell
 py -3.11 -m venv .venv
 .\.venv\Scripts\Activate.ps1
 pip install -e ".[dev]"
-pytest
+python scripts\run_dashboard.py
 ```
 
-Run the three-robot visual simulator (after installing dependencies):
+Open `http://127.0.0.1:8000`, choose **Full SIH Demo**, press **Load**, optionally enable **Presentation Mode**, then press **Start / Resume**. `scripts\start_dashboard.bat` is the one-click alternative.
+
+Other executable demonstrations:
 
 ```powershell
-.\.venv\Scripts\python.exe -m scripts.run_simulator --seed 0
+python -m scripts.run_simulator --seed 0
+python -m scripts.run_conflict_scenarios
+python -m scripts.run_corridor_scenarios
+python -m scripts.run_failure_scenario
+python -m scripts.run_offline_blockage_scenario
+pytest -q
 ```
 
-Use `--headless` for a console-only validation run.
-### Peer failure demo
+See [Architecture](docs/ARCHITECTURE.md), [Demo Guide](docs/DEMO_GUIDE.md), [Implementation Plan](docs/IMPLEMENTATION_PLAN.md), and [Demo Requirements](docs/DEMO_REQUIREMENTS.md).
 
-Run `python -m scripts.run_failure_scenario` to disable R2 deliberately, observe independent heartbeat timeouts, release its unfinished task once, and deterministically reassign it while traffic decisions remain robot-local.
-### Offline physical-blockage demo
+## Technology
 
-Run `python -m scripts.run_offline_blockage_scenario`. An offline R2 remains a physical obstacle, while R1 locally replans around it without a traffic-controller decision.
-## Local dashboard
-
-Install project dependencies, then run `python scripts/run_dashboard.py` and open `http://127.0.0.1:8000`. The dashboard streams the single active simulator over WebSocket and provides real scenario controls for basic, intersection, corridor, deadlock, robot failure, and offline physical blockage.
-### Controlled SIH presentation
-
-The dashboard now loads every judge-facing scenario paused. Use Play/Pause/Step, 0.25×–4× speed, deterministic restart/next controls, environment fault injection, map-cell obstacle/task selection, visualization layers, and event filters. See `docs/DEMO_GUIDE.md` for the recommended presentation flow.
+Python 3.11+, dataclasses/enums, pytest, Pygame, FastAPI, WebSockets, and a lightweight framework-free canvas frontend.

@@ -142,3 +142,16 @@ Start it on Windows with `scripts\\start_dashboard.bat`, or run `python scripts/
 `DemoController` is an operator-facing deterministic clock and environment adapter. Scenario load and restart are paused by default; play, pause, single-step, and speed alter only when logical ticks are applied. Pausing freezes robot motion and simulated heartbeats together, while WebSocket snapshots remain available. Failure and obstacle controls mutate physical environment inputs, and task controls use the shared lifecycle registry.
 
 The controller never invokes conflict detection/resolution, corridor ownership, yield selection, deadlock recovery, or A*. Robot-local outcomes and reasons are exposed through read-only `coordination_decisions()` and `active_conflict_markers()` views. The dashboard renders those facts without recomputing a winner.
+## Warehouse missions, payloads, and energy
+
+`FleetTask` remains backwards compatible with destination-only work and now also represents pickup/delivery missions with task type, source, destination, payload metadata, phase, dwell timers, progress, ETA, and allocation explanation. `Payload` and mission/load enums are immutable value objects. A robot exposes its simulated capacity, load state, current payload, and battery.
+
+`DeterministicTaskDispatcher` is a logistics allocator, not a traffic controller. Eligible idle robots are scored by distance to the next mission waypoint, current workload penalty, low-battery penalty, and robot ID as the final stable tie-break. Capacity is a hard eligibility filter. The factors and cost actually used are retained for dashboard explanation. Assignment only calls `RobotAgent.assign_goal`; the selected robot still chooses its own A* route and every coordination action.
+
+Pickup and dropoff use fixed logical dwell ticks. The dispatcher advances mission phase and load metadata only after the assigned robot reports that it reached the relevant waypoint. Progress is derived from mission phase, initial/remaining cell distance, and dwell progress rather than UI constants. Deterministic energy consumption is applied per simulation tick: movement costs more than waiting, idle costs least, and loaded movement adds a small prototype cost. Battery never bypasses safety and is not a right-of-way input.
+
+## Product dashboard and Full SIH Demo
+
+The framework-free canvas UI consumes one authoritative WebSocket snapshot. It renders warehouse zones/racks/aisles, typed environment objects, payload decks, heading/sensor cues, paths, numbered fading intent occupancy, and conflict details already computed by RobotAgent. Its interactive inspector is read only. Explicit map modes prevent a click from ambiguously creating several inputs. Presentation Mode changes layout only.
+
+`DemoController` uses a monotonic scenario revision so selections are invalidated on reset and source cursors so liveness, deadlock, task, and local-decision events are not replayed every tick. The deterministic Full SIH Demo director schedules mission, pallet, and failure inputs at fixed logical conditions. It never imports or invokes conflict/planning algorithms and never commands a winner, yield, route, or corridor token.
