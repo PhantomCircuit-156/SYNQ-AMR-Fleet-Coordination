@@ -93,3 +93,41 @@ def test_event_log_clear_and_dashboard_has_no_traffic_control_surface():
     with client:assert client.delete('/api/events').json()=={'events':0}
     source='\n'.join(path.read_text(encoding='utf-8') for path in Path('dashboard').glob('*.py'))
     for prohibited in ('resolve_conflict(', 'known_corridor_owner_for(', '_evaluate_deadlock_before_motion(', '_evaluate_conflicts_before_motion(', 'ConflictResolver(', 'CorridorProtocol('):assert prohibited not in source
+def test_structured_payload_mission_capacity_and_real_progress_api():
+    client,engine=client_and_engine()
+    engine.simulation.run_until_complete(100)
+    with client:
+        response=client.post('/api/tasks',json={
+            'task_type':'PICKUP_DELIVERY','source_x':10,'source_y':2,
+            'destination_x':30,'destination_y':2,'priority':'HIGH',
+            'payload_id':'PALLET-9','payload_type':'PALLET','weight_kg':45,'fragile':True,
+        })
+        assert response.status_code==200
+        task=response.json();assert task['assigned_robot_id']=='R2' and task['payload']['weight_kg']==45
+        assert task['source']=={'x':10,'y':2} and task['progress']==0
+        for _ in range(8):engine.step()
+        updated=next(t for t in client.get('/api/tasks').json() if t['task_id']==task['task_id'])
+        assert 0<updated['progress']<100 and updated['eta_ticks'] is not None
+
+
+def test_typed_obstacle_metadata_revision_and_nonduplicated_routes():
+    client,engine=client_and_engine()
+    with client:
+        initial=client.get('/api/status').json()['scenario_revision']
+        added=client.post('/api/environment/obstacles',json={'x':15,'y':12,'obstacle_type':'FORKLIFT'})
+        assert added.status_code==200 and added.json()['object_type']=='FORKLIFT'
+        status=client.get('/api/status').json();assert {'x':15,'y':12,'object_type':'FORKLIFT'} in status['grid']['environment_objects']
+        client.post('/api/scenarios/current/restart');assert client.get('/api/status').json()['scenario_revision']==initial+1
+        paths=[route.path for route in client.app.routes]
+        assert paths.count('/api/control/next-scenario')==1 and '/api/scenarios/next' not in paths
+
+
+def test_event_sources_are_consumed_once_instead_of_replayed_each_tick():
+    engine=DashboardEngine();engine.load_scenario('robot_failure')
+    for _ in range(3):engine.step()
+    engine.fail_robot('R2')
+    for _ in range(15):engine.step()
+    first=[e for e in engine.snapshot()['events'] if e['type']=='ROBOT_OFFLINE']
+    for _ in range(4):engine.step()
+    second=[e for e in engine.snapshot()['events'] if e['type']=='ROBOT_OFFLINE']
+    assert len(first)==len(second)==2

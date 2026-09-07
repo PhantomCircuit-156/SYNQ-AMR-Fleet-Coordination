@@ -1,0 +1,13 @@
+"""Deterministic simulation constants; values are prototype parameters, not hardware claims."""
+
+PICKUP_DWELL_TICKS = 2
+DROPOFF_DWELL_TICKS = 2
+
+BATTERY_MOVE_COST = 0.08
+BATTERY_LOADED_MOVE_EXTRA = 0.03
+BATTERY_WAIT_COST = 0.01
+BATTERY_IDLE_COST = 0.002
+LOW_BATTERY_PERCENT = 20.0
+
+DEFAULT_ROBOT_CAPACITY_KG = 40.0
+ROBOT_CAPACITY_KG = {"R1": 40.0, "R2": 50.0, "R3": 35.0}

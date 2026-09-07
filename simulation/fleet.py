@@ -5,6 +5,7 @@ from __future__ import annotations
 from dataclasses import dataclass, field
 
 from models.corridor import CorridorRegion
+from models.environment import EnvironmentObjectType
 from models.grid import Cell, WarehouseGrid
 from models.robot_state import RobotState
 from networking.peer_bus import InProcessPeerMessageBus
@@ -36,6 +37,7 @@ class FleetSimulation:
     state_history: list[dict[str, RobotState]] = field(default_factory=list, init=False)
     message_bus: InProcessPeerMessageBus = field(default_factory=InProcessPeerMessageBus, init=False)
     physical_obstacles: set[Cell] = field(default_factory=set, init=False)
+    environment_objects: dict[Cell, EnvironmentObjectType] = field(default_factory=dict, init=False)
 
     def __post_init__(self) -> None:
         robot_ids = [robot.robot_id for robot in self.robots]
@@ -61,14 +63,16 @@ class FleetSimulation:
         robot.disable()
         self.physical_obstacles.add(robot.position)
 
-    def add_dynamic_obstacle(self, cell: Cell) -> None:
+    def add_dynamic_obstacle(self, cell: Cell, obstacle_type: EnvironmentObjectType = EnvironmentObjectType.BOX) -> None:
         if not self.grid.is_walkable(cell): raise ValueError("Dynamic obstacle must be placed on walkable floor.")
         if cell in {robot.position for robot in self.robots}: raise ValueError("Dynamic obstacle cannot overlap a robot.")
         self.physical_obstacles.add(cell)
+        self.environment_objects[cell] = obstacle_type
 
     def remove_dynamic_obstacle(self, cell: Cell) -> None:
         if cell in {robot.position for robot in self.robots if not robot.enabled}: raise ValueError("An offline robot's occupied cell cannot be removed as an obstacle.")
         self.physical_obstacles.discard(cell)
+        self.environment_objects.pop(cell, None)
 
     def step(self) -> None:
         """Advance one tick using moves selected by independent robot agents."""
@@ -92,6 +96,7 @@ class FleetSimulation:
             if destination is not None:
                 robot.confirm_move(destination)
                 self.position_history[robot.robot_id].append(destination)
+            robot.consume_tick_energy(destination is not None)
         self.tick_count += 1
         for robot in self.robots:
             if robot.enabled:

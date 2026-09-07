@@ -7,10 +7,15 @@ from coordination.deadlock import DeadlockEvent, DeadlockEventType, DeadlockMana
 from coordination.intent import Intent, IntentManager
 from coordination.local_world import LocalWorldModel
 from coordination.resolution import ConflictResolution, ConflictResolver
+from config.simulation import (
+    BATTERY_IDLE_COST, BATTERY_LOADED_MOVE_EXTRA, BATTERY_MOVE_COST,
+    BATTERY_WAIT_COST, DEFAULT_ROBOT_CAPACITY_KG, ROBOT_CAPACITY_KG,
+)
 from metrics.robot_conflicts import RobotConflictMetrics
 from models.corridor import CorridorRegion, CorridorRequest, CorridorToken
 from models.grid import Cell, WarehouseGrid
 from models.messages import PeerStateMessage
+from models.mission import Payload, RobotLoadState
 from models.priority import TaskPriority
 from models.robot_state import RobotState
 from networking.peer_bus import InProcessPeerMessageBus
@@ -22,11 +27,14 @@ class RobotAgent:
     robot_id: str
     position: Cell
     planner: AStarPlanner = field(default_factory=AStarPlanner)
+    max_payload_kg: float | None = None
     state: RobotState = field(default=RobotState.IDLE, init=False)
     goal: Cell | None = field(default=None, init=False)
     path: tuple[Cell, ...] = field(default=(), init=False)
     velocity: tuple[int, int] = field(default=(0, 0), init=False)
     battery: float = field(default=100.0, init=False)
+    load_state: RobotLoadState = field(default=RobotLoadState.EMPTY, init=False)
+    current_payload: Payload | None = field(default=None, init=False)
     priority: TaskPriority = field(default=TaskPriority.NORMAL, init=False)
     intent: Intent | None = field(default=None, init=False)
     waiting_ticks: int = field(default=0, init=False)
@@ -53,6 +61,10 @@ class RobotAgent:
     _processed_deadlock_events: int = field(default=0, init=False)
 
     def __post_init__(self) -> None:
+        if self.max_payload_kg is None:
+            self.max_payload_kg = ROBOT_CAPACITY_KG.get(self.robot_id, DEFAULT_ROBOT_CAPACITY_KG)
+        if self.max_payload_kg <= 0:
+            raise ValueError("Robot payload capacity must be positive.")
         self.local_world_model = LocalWorldModel(self.robot_id)
         self.intent_manager = IntentManager()
         self.conflict_detector = ConflictDetector(self.robot_id)
@@ -71,6 +83,35 @@ class RobotAgent:
         self.corridor_tokens = ()
         self._refresh_own_state(self._last_timestamp)
 
+    def prepare_for_pickup(self) -> None:
+        self.current_payload = None
+        self.load_state = RobotLoadState.EN_ROUTE_TO_PICKUP
+
+    def load_payload(self, payload: Payload) -> None:
+        if payload.weight_kg > self.max_payload_kg:
+            raise ValueError(f"Payload exceeds {self.robot_id} capacity.")
+        self.current_payload = payload
+        self.load_state = RobotLoadState.LOADED
+
+    def unload_payload(self) -> None:
+        self.current_payload = None
+        self.load_state = RobotLoadState.EMPTY
+
+    def consume_tick_energy(self, moved: bool) -> float:
+        """Apply deterministic prototype energy use; this never changes safety policy."""
+        if not self.enabled:
+            return self.battery
+        if moved:
+            cost = BATTERY_MOVE_COST
+            if self.current_payload is not None:
+                cost += BATTERY_LOADED_MOVE_EXTRA
+        elif self.state in {RobotState.WAITING, RobotState.YIELDING}:
+            cost = BATTERY_WAIT_COST
+        else:
+            cost = BATTERY_IDLE_COST
+        self.battery = round(max(0.0, self.battery - cost), 4)
+        self._refresh_own_state(self._last_timestamp)
+        return self.battery
     def evaluate_peer_liveness(self, current_time: int) -> tuple[str, ...]:
         """Expire stale peers independently using this robot's local clock."""
         self._last_timestamp = current_time
@@ -163,8 +204,37 @@ class RobotAgent:
         """Expose this robot's cached local outcomes for read-only observability."""
         return tuple({"peer_robot_id": peer_id, "winner_robot_id": winner_id, "local_decision": "PROCEED" if winner_id == self.robot_id else "YIELD", "reason": self._resolution_reason_by_peer.get(peer_id, "UNKNOWN")} for peer_id, winner_id in sorted(self._winner_by_peer.items()))
     def active_conflict_markers(self) -> tuple[dict[str, object], ...]:
-        """Expose normalized active conflicts without granting dashboard control."""
-        return tuple({"conflict_type": signature[0].name, "robot_ids": signature[1], "cell": signature[2]} for signature in sorted(self._active_conflict_signatures, key=str))
+        """Expose predictions computed locally by this robot for observability."""
+        markers = []
+        for conflict in self.detect_conflicts():
+            signature = self._conflict_signature(conflict)
+            if signature not in self._active_conflict_signatures:
+                continue
+            peer_id = next(robot_id for robot_id in conflict.robot_ids if robot_id != self.robot_id)
+            winner_id = self._winner_by_peer.get(peer_id)
+            eta = min(time for _, time in conflict.time_by_robot) - self._last_timestamp
+            cell = conflict.cell
+            if cell is None and conflict.transitions:
+                cell = conflict.transitions[0].destination
+            markers.append({
+                "conflict_type": conflict.conflict_type.name,
+                "robot_ids": conflict.robot_ids,
+                "cell": cell,
+                "time_by_robot": conflict.time_by_robot,
+                "eta_ticks": max(1, eta),
+                "winner_robot_id": winner_id,
+                "yielding_robot_id": peer_id if winner_id == self.robot_id else self.robot_id,
+                "reason": self._resolution_reason_by_peer.get(peer_id, "UNKNOWN"),
+                "observer_robot_id": self.robot_id,
+            })
+        return tuple(markers)
+
+    def corridor_ownership(self) -> tuple[dict[str, str | None], ...]:
+        return tuple(
+            {"corridor_id": corridor_id, "owner_robot_id": owner_id}
+            for corridor_id, owner_id in sorted(self._corridor_owner_by_id.items())
+        )
+
     def known_corridor_owner_for(self, corridor_id: str) -> str | None: return self._corridor_owner_by_id.get(corridor_id)
     @property
     def deadlock_events(self) -> tuple[DeadlockEvent, ...]: return tuple(self.deadlock_manager.events)

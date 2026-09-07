@@ -6,8 +6,11 @@ from dataclasses import dataclass
 from random import Random
 
 from models.grid import Cell, WarehouseGrid
+from models.mission import Payload, PayloadType, TaskType
+from models.priority import TaskPriority
 from simulation.fleet import FleetSimulation
 from simulation.robot import RobotAgent
+from tasks.lifecycle import DeterministicTaskDispatcher, FleetTask
 
 
 @dataclass(frozen=True, slots=True)
@@ -48,8 +51,19 @@ def build_basic_three_robot_scenario(seed: int = 0) -> tuple[WarehouseScenario, 
         RobotAgent("R3", Cell(2, 22)),
     )
     goals = (Cell(36, 2), Cell(36, 12), Cell(36, 22))
-    for robot, goal in zip(robots, goals, strict=True):
-        robot.assign_goal(goal)
+    payloads = (
+        Payload("TOTE-1042", PayloadType.TOTE, 12.0),
+        Payload("CARTON-208", PayloadType.CARTON, 18.5, fragile=True),
+        Payload("BIN-731", PayloadType.PARTS_BIN, 9.0),
+    )
+    dispatcher = DeterministicTaskDispatcher()
+    for index, (robot, goal, payload) in enumerate(zip(robots, goals, payloads, strict=True), start=1):
+        task = FleetTask(
+            f"M-{index:03d}", goal, priority=TaskPriority.NORMAL,
+            task_type=TaskType.PICKUP_DELIVERY, source=Cell(robot.position.x + 1, robot.position.y), payload=payload,
+        )
+        dispatcher.add_task(task)
+        dispatcher.assign_initial(task.task_id, robot)
     scenario = WarehouseScenario(
         grid=grid,
         zones=(
@@ -59,4 +73,4 @@ def build_basic_three_robot_scenario(seed: int = 0) -> tuple[WarehouseScenario, 
         ),
         robot_colors={"R1": (229, 57, 53), "R2": (30, 136, 229), "R3": (67, 160, 71)},
     )
-    return scenario, FleetSimulation(grid=grid, robots=robots)
+    return scenario, FleetSimulation(grid=grid, robots=robots, task_dispatcher=dispatcher)
