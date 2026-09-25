@@ -7,5 +7,5 @@
 - The reported zero is zero detected inter-robot center-distance threshold breaches in the tested runs. It is not a proof of collision freedom, a contact-sensor result, or a production safety claim.
 - No physical AMR validation, ROS 2 deployment, or large-fleet scalability benchmark.
 - The benchmark Supervisor can issue an emergency stop on a threshold breach. It never chooses a traffic winner or robot route.
-- The Webots GUI was not visually verified by Codex because desktop control failed to initialize. The Supervisor ground-truth logs and saved result JSON document physical motion in batch mode; a human should still review the GUI run.
+- Actual Webots viewport exports from real-time runs were inspected for start framing and physical movement. Native desktop control still fails to initialize, so GUI toolbar interaction was not independently inspected. The portable GUI launcher explicitly selects pause or real-time rendering.
 - Webots uses external Cyberbotics PROTO references; initial asset resolution may require network access. These models retain Cyberbotics licensing.

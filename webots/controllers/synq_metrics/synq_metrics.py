@@ -5,6 +5,7 @@ import sys
 from math import hypot
 from pathlib import Path
 from controller import Supervisor
+from demo_visuals import DemoVisuals
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "synq_controller"))
 from benchmark_metrics import result_summary
@@ -22,6 +23,7 @@ def main():
     if any(node is None for node in nodes.values()):
         raise RuntimeError("Benchmark requires DEF R1, R2, and R3")
     telemetry = {}
+    visuals = DemoVisuals(robot, mode)
     start = robot.getTime()
     collisions = 0
     active_pairs = set()
@@ -42,6 +44,7 @@ def main():
             except (ValueError, KeyError, TypeError) as error:
                 print(f"METRICS ignored packet: {error}", flush=True)
             receiver.nextPacket()
+        visuals.update(now, telemetry)
         positions = {name: node.getPosition() for name, node in nodes.items()}
         if start_poses is None:
             start_poses = positions.copy()
@@ -129,6 +132,7 @@ def main():
         result["stops"] = sum(p.get("stops", 0) for p in telemetry.values())
         result["distance"] = sum(p.get("distance", 0) for p in telemetry.values())
         result["replans"] = sum(p.get("replans", 0) for p in telemetry.values())
+        visuals.capture(now, final=True)
         print("===== SYNQ EXPERIMENT RESULT =====", flush=True)
         print(f"Mode: {mode}", flush=True)
         for name in names:

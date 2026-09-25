@@ -2,8 +2,31 @@
 EXTERNPROTO "https://raw.githubusercontent.com/cyberbotics/webots/R2025a/projects/objects/floors/protos/RectangleArena.proto"
 EXTERNPROTO "https://raw.githubusercontent.com/cyberbotics/webots/R2025a/projects/robots/mir/mir100/protos/Mir100.proto"
 WorldInfo { basicTimeStep 32 }
-Viewpoint { orientation 0 0 1 0 position 0 0 12 fieldOfView 1.1 }
-RectangleArena { floorSize 15 15 }
+# Fixed camera: forward axis points toward the origin, z remains up.
+Viewpoint {
+  orientation -0.408248290464 0.408248290464 0.816496580928 1.772154247585
+  position 0 -9 12
+  fieldOfView 0.85
+  near 0.1
+  far 60
+  followType "None"
+  description "SYNQ three-AMR overview"
+}
+Background { skyColor [ 0.12 0.16 0.22 ] }
+DirectionalLight {
+  direction 0.3 0.4 -1
+  ambientIntensity 0.65
+  intensity 0.9
+}
+DirectionalLight { direction -1 -0.5 -1 intensity 0.35 }
+RectangleArena {
+  floorSize 15 15
+  floorAppearance PBRAppearance {
+    baseColor 0.28 0.32 0.37
+    roughness 1
+    metalness 0
+  }
+}
 DEF R1 Mir100 {
   translation -3 -1 0
   rotation 0 0 1 0
@@ -11,6 +34,14 @@ DEF R1 Mir100 {
   color 1 0.2 0.2
   controller "synq_controller"
   bodySlot [
+    # Identification marker only; no collision shape or mass.
+    Pose { translation 0 0 0.06 children [
+      Shape {
+        castShadows FALSE
+        appearance PBRAppearance { baseColor 0.95 0.12 0.14 emissiveColor 0.95 0.12 0.14 roughness 1 metalness 0 }
+        geometry Box { size 0.4 0.3 0.025 }
+      }
+    ] }
     Emitter { name "peer_emitter" channel 1 }
     Receiver { name "peer_receiver" channel 1 }
   ]
@@ -22,6 +53,14 @@ DEF R2 Mir100 {
   color 0.2 1 0.2
   controller "synq_controller"
   bodySlot [
+    # Identification marker only; no collision shape or mass.
+    Pose { translation 0 0 0.06 children [
+      Shape {
+        castShadows FALSE
+        appearance PBRAppearance { baseColor 0.12 0.8 0.24 emissiveColor 0.12 0.8 0.24 roughness 1 metalness 0 }
+        geometry Box { size 0.4 0.3 0.025 }
+      }
+    ] }
     Emitter { name "peer_emitter" channel 1 }
     Receiver { name "peer_receiver" channel 1 }
   ]
@@ -33,6 +72,14 @@ DEF R3 Mir100 {
   color 0.2 0.4 1
   controller "synq_controller"
   bodySlot [
+    # Identification marker only; no collision shape or mass.
+    Pose { translation 0 0 0.06 children [
+      Shape {
+        castShadows FALSE
+        appearance PBRAppearance { baseColor 0.12 0.38 1 emissiveColor 0.12 0.38 1 roughness 1 metalness 0 }
+        geometry Box { size 0.4 0.3 0.025 }
+      }
+    ] }
     Emitter { name "peer_emitter" channel 1 }
     Receiver { name "peer_receiver" channel 1 }
   ]
@@ -44,5 +91,143 @@ DEF METRICS Robot {
   children [
     Receiver { name "telemetry_receiver" channel 1 }
     Emitter { name "safety_emitter" channel 1 }
+  ]
+}
+
+# Decorative only: no collision geometry, map input or traffic semantics.
+DEF DEMO_FLOOR_MARKINGS Group {
+  children [
+    Pose { translation 0 -1 0.003 children [
+      Shape {
+        appearance PBRAppearance { baseColor 0.52 0.56 0.60 roughness 1 metalness 0 }
+        geometry Box { size 7.4 1.2 0.002 }
+      }
+    ] }
+    Pose { translation 0 1 0.003 children [
+      Shape {
+        appearance PBRAppearance { baseColor 0.52 0.56 0.60 roughness 1 metalness 0 }
+        geometry Box { size 7.4 1.2 0.002 }
+      }
+    ] }
+    Pose { translation 0 0 0.005 children [
+      Shape {
+        appearance PBRAppearance { baseColor 0.52 0.56 0.60 roughness 1 metalness 0 }
+        geometry Box { size 1.2 7.4 0.002 }
+      }
+    ] }
+    Pose { translation -1.5 0 0.009 children [
+      Shape {
+        appearance PBRAppearance { baseColor 1 0.74 0.16 roughness 1 metalness 0 }
+        geometry Box { size 0.045 3 0.002 }
+      }
+    ] }
+    Pose { translation 1.5 0 0.009 children [
+      Shape {
+        appearance PBRAppearance { baseColor 1 0.74 0.16 roughness 1 metalness 0 }
+        geometry Box { size 0.045 3 0.002 }
+      }
+    ] }
+    Pose { translation 0 -1.5 0.009 children [
+      Shape {
+        appearance PBRAppearance { baseColor 1 0.74 0.16 roughness 1 metalness 0 }
+        geometry Box { size 3 0.045 0.002 }
+      }
+    ] }
+    Pose { translation 0 1.5 0.009 children [
+      Shape {
+        appearance PBRAppearance { baseColor 1 0.74 0.16 roughness 1 metalness 0 }
+        geometry Box { size 3 0.045 0.002 }
+      }
+    ] }
+    Pose { translation 0 -1 0.012 children [
+      Shape {
+        appearance PBRAppearance { baseColor 0.95 0.12 0.14 roughness 1 metalness 0 }
+        geometry Box { size 6 0.045 0.002 }
+      }
+    ] }
+    Pose { translation 0 1 0.012 children [
+      Shape {
+        appearance PBRAppearance { baseColor 0.12 0.8 0.24 roughness 1 metalness 0 }
+        geometry Box { size 6 0.045 0.002 }
+      }
+    ] }
+    Pose { translation 0 0 0.015 children [
+      Shape {
+        appearance PBRAppearance { baseColor 0.12 0.38 1 roughness 1 metalness 0 }
+        geometry Box { size 0.045 6 0.002 }
+      }
+    ] }
+    Pose { translation 2.6 -1 0.019 children [
+      Shape {
+        appearance PBRAppearance { baseColor 0.95 0.12 0.14 roughness 1 metalness 0 }
+        geometry Box { size 0.06 0.8 0.002 }
+      }
+    ] }
+    Pose { translation 3.4 -1 0.019 children [
+      Shape {
+        appearance PBRAppearance { baseColor 0.95 0.12 0.14 roughness 1 metalness 0 }
+        geometry Box { size 0.06 0.8 0.002 }
+      }
+    ] }
+    Pose { translation 3 -1.4 0.019 children [
+      Shape {
+        appearance PBRAppearance { baseColor 0.95 0.12 0.14 roughness 1 metalness 0 }
+        geometry Box { size 0.8 0.06 0.002 }
+      }
+    ] }
+    Pose { translation 3 -0.6 0.019 children [
+      Shape {
+        appearance PBRAppearance { baseColor 0.95 0.12 0.14 roughness 1 metalness 0 }
+        geometry Box { size 0.8 0.06 0.002 }
+      }
+    ] }
+    Pose { translation 2.6 1 0.019 children [
+      Shape {
+        appearance PBRAppearance { baseColor 0.12 0.8 0.24 roughness 1 metalness 0 }
+        geometry Box { size 0.06 0.8 0.002 }
+      }
+    ] }
+    Pose { translation 3.4 1 0.019 children [
+      Shape {
+        appearance PBRAppearance { baseColor 0.12 0.8 0.24 roughness 1 metalness 0 }
+        geometry Box { size 0.06 0.8 0.002 }
+      }
+    ] }
+    Pose { translation 3 0.6 0.019 children [
+      Shape {
+        appearance PBRAppearance { baseColor 0.12 0.8 0.24 roughness 1 metalness 0 }
+        geometry Box { size 0.8 0.06 0.002 }
+      }
+    ] }
+    Pose { translation 3 1.4 0.019 children [
+      Shape {
+        appearance PBRAppearance { baseColor 0.12 0.8 0.24 roughness 1 metalness 0 }
+        geometry Box { size 0.8 0.06 0.002 }
+      }
+    ] }
+    Pose { translation -0.4 3 0.019 children [
+      Shape {
+        appearance PBRAppearance { baseColor 0.12 0.38 1 roughness 1 metalness 0 }
+        geometry Box { size 0.06 0.8 0.002 }
+      }
+    ] }
+    Pose { translation 0.4 3 0.019 children [
+      Shape {
+        appearance PBRAppearance { baseColor 0.12 0.38 1 roughness 1 metalness 0 }
+        geometry Box { size 0.06 0.8 0.002 }
+      }
+    ] }
+    Pose { translation 0 2.6 0.019 children [
+      Shape {
+        appearance PBRAppearance { baseColor 0.12 0.38 1 roughness 1 metalness 0 }
+        geometry Box { size 0.8 0.06 0.002 }
+      }
+    ] }
+    Pose { translation 0 3.4 0.019 children [
+      Shape {
+        appearance PBRAppearance { baseColor 0.12 0.38 1 roughness 1 metalness 0 }
+        geometry Box { size 0.8 0.06 0.002 }
+      }
+    ] }
   ]
 }

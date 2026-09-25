@@ -89,18 +89,16 @@ py -3.11 -m venv .venv
 
 The runner searches for Webots under %LOCALAPPDATA%\Programs\Webots. Set WEBOTS_HOME to the Webots installation directory if needed. Webots supplies its own Python controller API; it is not a pip dependency. The runner starts a fresh world per mode and refuses stale, incomplete, physically invalid, or disconnected-peer results.
 
-For visual inspection, close old Webots windows, set the mode before launch, then open the exact benchmark world:
+For the GUI demo, launch the verified world with rendering enabled. Start paused so the full scene is visible before recording:
 
 ~~~powershell
-$env:MODE = 'synq' # change to 'baseline' for the other run
-$env:SYNQ_BATCH = '0'
-$env:SYNQ_ROOT = (Get-Location).Path
-$env:PATH = (Join-Path $env:SYNQ_ROOT '.venv\Scripts') + ';' + $env:PATH
-$webotsExe = Join-Path $env:LOCALAPPDATA 'Programs\Webots\msys64\mingw64\bin\webots.exe'
-& $webotsExe '.\webots\worlds\synq_three_robot.wbt'
+& '.\scripts\show_webots_demo.ps1' -Mode synq -Paused
+# Use -Mode baseline for the comparison.
 ~~~
 
-Reset the simulation, press Run, and confirm console lines beginning SYNQ R1:, SYNQ R2:, and SYNQ R3:, including TASK_COMPLETE for each. Close and relaunch Webots to switch MODE. The legacy single-R1 probe remains under webots/worlds/synq_mir100_r1.wbt; it is a different world.
+Press **Run / real-time** in Webots. The overhead camera frames all three robots, colored roof markers identify R1/red, R2/green, and R3/blue, and the yellow outline shows the shared region. Colored lines and goal squares are decorative only. The legend and console report state changes. Use real-time mode for recording; Fast mode is for benchmarking and may suppress rendering. The GUI launcher keeps manual runs from overwriting benchmark result files.
+
+Close and relaunch to change mode. See [visual demo details](docs/VISUAL_DEMO.md). The legacy single-R1 probe remains a different world.
 
 ## What to Observe
 

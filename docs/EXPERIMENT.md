@@ -39,4 +39,4 @@ Run from the repository root:
 & '.\webots\controllers\synq_metrics\run_webots_experiment.ps1' -Mode both
 ~~~
 
-The exact measured records are in ../webots/controllers/synq_metrics/baseline_result.json and synq_result.json. One controlled scenario is insufficient for a broad statistical performance or universal collision-safety claim. GUI visual inspection remains a separate manual check; these numbers come from Webots batch runs.
+The exact measured records are in ../webots/controllers/synq_metrics/baseline_result.json and synq_result.json. One controlled scenario is insufficient for a broad statistical performance or universal collision-safety claim. These numbers come from Webots batch runs. The visual-only world was also replayed with real-time rendering and its actual viewport exports inspected; see VISUAL_DEMO.md.
