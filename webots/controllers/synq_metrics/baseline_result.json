@@ -1,0 +1,78 @@
+{
+  "mode": "baseline",
+  "completion": {
+    "R1": 36.416000000000004,
+    "R2": 61.056000000000004,
+    "R3": 85.696
+  },
+  "makespan": 85.696,
+  "total_waiting": 73.92,
+  "conflicts": 2,
+  "yields": 2,
+  "collisions": 0,
+  "units": {
+    "completion": "seconds",
+    "makespan": "seconds",
+    "total_waiting": "seconds",
+    "distance": "meters",
+    "ground_truth_distance": "meters",
+    "physical_goal_error": "meters",
+    "minimum_separation": "meters"
+  },
+  "safety_threshold_breaches": 0,
+  "minimum_separation": 1.1001520312303965,
+  "ground_truth_start": {
+    "R1": [
+      -3.000004765835147,
+      -0.999999133546449,
+      -0.0029068537019709684
+    ],
+    "R2": [
+      -3.000004765835147,
+      1.000000866453551,
+      -0.002906853701970996
+    ],
+    "R3": [
+      -8.664535510173013e-07,
+      -3.000004765835147,
+      -0.0029068537019709684
+    ]
+  },
+  "ground_truth_end": {
+    "R1": [
+      2.8948488145525246,
+      -0.9999740761449291,
+      -0.01042376241248194
+    ],
+    "R2": [
+      2.894853187395642,
+      1.0000459616692332,
+      -0.010423762104974421
+    ],
+    "R3": [
+      -6.552744183550765e-05,
+      2.894869526489781,
+      -0.01042775266764262
+    ]
+  },
+  "ground_truth_distance": {
+    "R1": 5.8949940296489665,
+    "R2": 5.895031504534318,
+    "R3": 5.895015277541313
+  },
+  "physical_goal_error": {
+    "R1": 0.10515118864309436,
+    "R2": 0.10514682264971688,
+    "R3": 0.1051304939317251
+  },
+  "physically_complete": true,
+  "peer_exchange_complete": true,
+  "peer_packets": {
+    "R1": 5354,
+    "R2": 5354,
+    "R3": 5354
+  },
+  "stops": 2,
+  "distance": 17.706410770192164,
+  "replans": 0
+}

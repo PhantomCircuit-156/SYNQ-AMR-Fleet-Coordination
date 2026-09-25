@@ -1,0 +1,51 @@
+#VRML_SIM R2025a utf8
+EXTERNPROTO "https://raw.githubusercontent.com/cyberbotics/webots/R2025a/projects/robots/mir/mir100/protos/Mir100.proto"
+
+WorldInfo {
+  basicTimeStep 32
+  coordinateSystem "ENU"
+  title "SYNQ R1 MiR100 physical motion probe"
+}
+Viewpoint {
+  orientation 0.3 0.3 0.9 1.7
+  position 0 -7 7
+}
+Background {
+  skyColor [ 0.8 0.85 0.9 ]
+}
+DirectionalLight {
+  direction -0.5 -0.5 -1
+}
+Solid {
+  translation 0 0 -0.05
+  children [
+    Shape {
+      appearance PBRAppearance {
+        baseColor 0.7 0.72 0.74
+        roughness 1
+        metalness 0
+      }
+      geometry Box {
+        size 6 6 0.1
+      }
+    }
+  ]
+  name "floor"
+  boundingObject Box {
+    size 6 6 0.1
+  }
+  locked TRUE
+}
+DEF R1 Mir100 {
+  translation -1.8 -1.8 0
+  name "R1"
+  controller "synq_mir100"
+  bodySlot [
+    GPS {
+      name "synq_gps"
+    }
+    InertialUnit {
+      name "synq_imu"
+    }
+  ]
+}

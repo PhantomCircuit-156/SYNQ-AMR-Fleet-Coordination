@@ -1,0 +1,78 @@
+{
+  "mode": "synq",
+  "completion": {
+    "R1": 36.416000000000004,
+    "R2": 36.416000000000004,
+    "R3": 54.912
+  },
+  "makespan": 54.912,
+  "total_waiting": 18.496,
+  "conflicts": 1,
+  "yields": 1,
+  "collisions": 0,
+  "units": {
+    "completion": "seconds",
+    "makespan": "seconds",
+    "total_waiting": "seconds",
+    "distance": "meters",
+    "ground_truth_distance": "meters",
+    "physical_goal_error": "meters",
+    "minimum_separation": "meters"
+  },
+  "safety_threshold_breaches": 0,
+  "minimum_separation": 1.100152031230405,
+  "ground_truth_start": {
+    "R1": [
+      -3.000004765835147,
+      -0.999999133546449,
+      -0.0029068537019709684
+    ],
+    "R2": [
+      -3.000004765835147,
+      1.000000866453551,
+      -0.0029068537019709684
+    ],
+    "R3": [
+      -8.664535510094951e-07,
+      -3.000004765835147,
+      -0.0029068537019709684
+    ]
+  },
+  "ground_truth_end": {
+    "R1": [
+      2.894848815176659,
+      -0.9999776574214866,
+      -0.010423762028531458
+    ],
+    "R2": [
+      2.8948488151766627,
+      1.0000223425785333,
+      -0.010423762028531652
+    ],
+    "R3": [
+      -3.74671041221418e-05,
+      2.8948695279570615,
+      -0.010427752667642481
+    ]
+  },
+  "ground_truth_distance": {
+    "R1": 5.894990448372324,
+    "R2": 5.894990448372346,
+    "R3": 5.895011696582018
+  },
+  "physical_goal_error": {
+    "R1": 0.10515118719702218,
+    "R2": 0.10515118719701863,
+    "R3": 0.10513047871932743
+  },
+  "physically_complete": true,
+  "peer_exchange_complete": true,
+  "peer_packets": {
+    "R1": 3430,
+    "R2": 3430,
+    "R3": 3430
+  },
+  "stops": 1,
+  "distance": 17.706410766652645,
+  "replans": 0
+}

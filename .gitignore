@@ -32,3 +32,11 @@ Desktop.ini
 # Runtime artifacts
 logs/
 artifacts/
+
+# Webots/editor temporary files (worlds, controllers, and result JSON stay tracked)
+*.wbproj
+*.wbt~
+*.wbt.tmp
+*.log
+webots/worlds/.*.jpg
+.DS_Store

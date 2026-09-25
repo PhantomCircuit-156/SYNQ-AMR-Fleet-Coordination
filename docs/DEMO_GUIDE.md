@@ -2,7 +2,7 @@
 
 ## Start
 
-From `C:\SYNQ` on Windows:
+From the repository root on Windows:
 
 ```powershell
 .\.venv\Scripts\python.exe scripts\run_dashboard.py
