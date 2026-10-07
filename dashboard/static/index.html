@@ -1,14 +1,138 @@
-<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>SYNQ · Decentralized Fleet Operations</title><link rel="stylesheet" href="/static/styles.css"></head><body>
-<header class="topbar"><div class="brand"><span class="mark">S</span><div><b>SYNQ</b><strong>DECENTRALIZED MULTI-AMR COORDINATION</strong><small>NO CENTRAL TRAFFIC CONTROLLER · PLAN → SHARE INTENT → PREDICT → RESOLVE LOCALLY → MOVE</small></div></div><div class="top-actions"><button id="presentation">Presentation mode</button><button id="fullscreen">⛶ Fullscreen</button><span id="connection" class="badge neutral">CONNECTING</span><span id="run-badge" class="badge paused">PAUSED</span><span class="top-readout"><small>SIM TICK</small><strong id="sim-time">000</strong></span><span id="collision-card" class="collision safe"><small>SAFETY INVARIANT</small><strong><span id="collision-count">0</span> COLLISIONS</strong></span></div></header>
-<main class="shell">
-<aside class="control-rail panel"><div class="panel-title"><span>MISSION CONTROL</span><i>OPERATOR</i></div>
-<section><label class="eyebrow">SCENARIO</label><select id="scenario-select"></select><div class="button-grid"><button id="load">Load</button><button id="restart">Restart</button><button id="next">Next scenario</button></div><div class="scenario-note"><strong id="scenario-name"></strong><p id="scenario-demo"></p><small>WATCH FOR</small><p id="scenario-watch"></p></div><div id="demo-phase" class="demo-phase hidden"><small id="phase-count"></small><strong id="phase-title"></strong><p id="phase-narration"></p></div></section>
-<section><label class="eyebrow">TIMELINE</label><div class="transport"><button id="play" class="primary">▶ Start / Resume</button><button id="pause">Ⅱ Pause</button><button id="step">Step +1</button><button id="next-phase">Next phase</button></div><label class="eyebrow">SPEED</label><div id="speeds" class="speed-row"></div></section>
-<section class="engineering-only"><label class="eyebrow">MAP TOOL · <b id="mode-label">SELECT</b></label><div id="tools" class="tool-grid"><button data-mode="SELECT">Select</button><button data-mode="PICKUP">Set pickup</button><button data-mode="DROPOFF">Set dropoff</button><button data-mode="ADD_OBSTACLE">Add obstacle</button><button data-mode="REMOVE_OBSTACLE">Remove</button><button data-mode="INSPECT">Inspect cell</button></div><div class="waypoints"><div><small>PICKUP</small><strong id="pickup-cell">Not set</strong></div><div><small>DROPOFF</small><strong id="dropoff-cell">Not set</strong></div></div></section>
-<section class="engineering-only mission-builder"><label class="eyebrow">CREATE WAREHOUSE MISSION</label><div class="field-pair"><label>Task type<select id="task-type"><option>PICKUP_DELIVERY</option><option>TRANSFER</option><option>REPLENISHMENT</option><option>EXPEDITE</option></select></label><label>Priority<select id="task-priority"><option>NORMAL</option><option>HIGH</option></select></label></div><div class="field-pair"><label>Payload type<select id="payload-type"><option>TOTE</option><option>CARTON</option><option>PALLET</option><option>PARTS_BIN</option></select></label><label>Weight kg<input id="payload-weight" type="number" min="0.1" max="1000" step="0.1" value="12"></label></div><label>Payload ID<input id="payload-id" maxlength="32" value="TOTE-NEW"></label><label class="check"><input id="fragile" type="checkbox"> Fragile handling metadata</label><button id="create-task" class="primary full">Create & allocate mission</button></section>
-<section><label class="eyebrow">EVENT INJECTION</label><div class="field-pair"><select id="fail-select"><option>R1</option><option selected>R2</option><option>R3</option></select><button id="fail" class="danger">Fail AMR</button></div><div class="engineering-only"><label>Obstacle type<select id="obstacle-type"><option>BOX</option><option>PALLET</option><option>FORKLIFT</option><option>BLOCKED_AISLE</option></select></label></div><div id="feedback" class="feedback"></div></section>
-<section class="engineering-only"><label class="eyebrow">VISUALIZATION</label><div id="layers" class="layer-list"></div></section></aside>
-<section class="workspace"><div class="panel map-panel"><div class="map-header"><div><span class="eyebrow">LIVE WAREHOUSE DIGITAL TWIN</span><h2 id="map-title">Basic Fleet</h2></div><div class="map-tools"><div class="legend"><span><i class="line path-line"></i>Path</span><span><i class="intent-key"></i>Future occupancy</span><span><i class="dot robot-dot"></i>AMR</span></div><button id="zoom-out">−</button><button id="fit">Fit</button><button id="zoom-in">+</button></div></div><div class="canvas-wrap"><canvas id="warehouse"></canvas><div id="map-mode" class="map-mode">SELECT</div><div id="cell-tooltip" class="cell-tooltip hidden"></div><div id="conflict-card" class="conflict-card hidden"></div></div></div><div id="metrics" class="metric-strip"></div></section>
-<aside class="fleet-rail"><section class="panel robot-panel"><div class="panel-title"><span>FLEET STATUS</span><i id="fleet-count">3 AMRs</i></div><div id="robots" class="robot-cards"></div></section><section class="panel inspector-panel"><div class="panel-title"><span>AMR INSPECTOR</span><i>READ ONLY</i></div><div id="inspector" class="inspector empty">Select an AMR on the map or fleet list.</div></section><section class="panel task-panel"><div class="panel-title"><span>MISSION WORKLOAD</span><i id="task-count">0 TASKS</i></div><div id="tasks" class="tasks"></div></section></aside>
-<section class="panel event-panel engineering-only"><div class="event-head"><div class="panel-title"><span>LIVE EVENT JOURNAL</span><i>ROBOT-LOCAL DECISIONS</i></div><div id="filters" class="filters"></div><button id="clear-log">Clear</button></div><div id="events" class="events"></div></section>
-</main><script src="/static/app.js"></script></body></html>
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>SYNQ · Fleet Intelligence Console</title>
+<link rel="icon" href="data:,">
+<link rel="stylesheet" href="/static/styles.css?v=dashboard-v1">
+</head>
+<body>
+<header class="topbar">
+  <div class="brand-block">
+    <div class="brand-mark">S</div>
+    <div class="brand-copy">
+      <div class="brand-line"><b>SYNQ</b><span>FLEET INTELLIGENCE CONSOLE</span></div>
+      <small>PYTHON GRID SIMULATION · DECENTRALIZED MULTI-AMR COORDINATION</small>
+    </div>
+  </div>
+  <div class="top-center">
+    <div class="system-chip"><span class="live-dot"></span><span id="connection">CONNECTING</span></div>
+    <div class="system-chip"><span id="run-badge" class="badge paused">PAUSED</span></div>
+    <div class="tick-readout"><small>SIM TICK</small><strong id="sim-time">000</strong></div>
+  </div>
+  <div class="top-actions">
+    <button id="presentation" class="ghost-btn">Presentation</button>
+    <button id="fullscreen" class="ghost-btn">⛶ Fullscreen</button>
+    <div id="collision-card" class="safety-pill pending"><span class="safety-dot"></span><div><small>GRID COLLISIONS</small><strong><span id="collision-count">—</span> COLLISIONS</strong></div></div>
+  </div>
+</header>
+<div id="feedback" class="feedback" role="status" aria-live="polite"></div>
+
+<main class="app-shell">
+  <aside class="left-rail">
+    <div class="rail-scroll">
+      <details class="rail-section" open>
+        <summary><span>SCENARIO</span><small>MISSION CONTROL</small></summary>
+        <div class="section-body">
+          <label class="field-label">ACTIVE SCENARIO<select id="scenario-select"></select></label>
+          <div class="scenario-actions"><button id="load" class="primary-btn">Load</button><button id="restart">Restart</button></div>
+          <button id="next" class="secondary-btn full">Next scenario</button>
+          <div class="scenario-summary compact">
+            <div class="scenario-summary-head"><strong id="scenario-name">Basic Fleet</strong><button id="scenario-info-toggle" class="icon-btn" aria-expanded="false" aria-label="Show scenario details">i</button></div>
+            <div id="scenario-details" class="scenario-details"><p id="scenario-demo"></p><div class="watch-label">WATCH FOR</div><p id="scenario-watch"></p></div>
+          </div>
+          <div id="demo-phase" class="phase-card hidden"><small id="phase-count"></small><strong id="phase-title"></strong><p id="phase-narration"></p></div>
+        </div>
+      </details>
+
+      <details class="rail-section" open>
+        <summary><span>SIMULATION</span><small>TIMELINE</small></summary>
+        <div class="section-body">
+          <div class="transport transport-primary"><button id="play" class="primary-btn">▶ Start / Resume</button><button id="pause">Ⅱ Pause</button></div>
+          <div class="transport"><button id="step">Step +1</button><button id="next-phase">Next phase</button></div>
+          <div class="field-label speed-label">SPEED</div><div id="speeds" class="speed-row"></div>
+        </div>
+      </details>
+
+      <details class="rail-section engineering-only">
+        <summary><span>MAP TOOLS</span><small id="mode-label">SELECT</small></summary>
+        <div class="section-body">
+          <div id="tools" class="tool-grid">
+            <button data-mode="SELECT">Select</button><button data-mode="PICKUP">Set pickup</button>
+            <button data-mode="DROPOFF">Set dropoff</button><button data-mode="ADD_OBSTACLE">Add obstacle</button>
+            <button data-mode="REMOVE_OBSTACLE">Remove</button><button data-mode="INSPECT">Inspect cell</button>
+          </div>
+          <div class="waypoints"><div><small>PICKUP</small><strong id="pickup-cell">Not set</strong></div><div><small>DROPOFF</small><strong id="dropoff-cell">Not set</strong></div></div>
+        </div>
+      </details>
+
+      <details class="rail-section engineering-only">
+        <summary><span>CREATE MISSION</span><small>DISPATCH</small></summary>
+        <div class="section-body mission-builder">
+          <div class="field-pair"><label>Task type<select id="task-type"><option>PICKUP_DELIVERY</option><option>TRANSFER</option><option>REPLENISHMENT</option><option>EXPEDITE</option></select></label><label>Priority<select id="task-priority"><option>NORMAL</option><option>HIGH</option></select></label></div>
+          <div class="field-pair"><label>Payload type<select id="payload-type"><option>TOTE</option><option>CARTON</option><option>PALLET</option><option>PARTS_BIN</option></select></label><label>Weight kg<input id="payload-weight" type="number" min="0.1" max="1000" step="0.1" value="12"></label></div>
+          <label>Payload ID<input id="payload-id" maxlength="32" value="TOTE-NEW"></label>
+          <label class="check"><input id="fragile" type="checkbox"> Fragile handling metadata</label>
+          <button id="create-task" class="primary-btn full">Create &amp; allocate mission</button>
+        </div>
+      </details>
+
+      <details class="rail-section engineering-only">
+        <summary><span>VISUAL LAYERS</span><small>DISPLAY</small></summary>
+        <div id="layers" class="section-body layer-list"></div>
+      </details>
+
+      <details class="rail-section engineering-only test-tools">
+        <summary><span>TEST TOOLS</span><small>DANGER ZONE</small></summary>
+        <div class="section-body">
+          <div class="danger-note">Failure injection changes the simulation state and is intended for controlled testing.</div>
+          <div class="field-pair"><select id="fail-select"><option>R1</option><option selected>R2</option><option>R3</option></select><button id="fail" class="danger-btn">Fail AMR</button></div>
+          <label class="compact-label">Obstacle type<select id="obstacle-type"><option>BOX</option><option>PALLET</option><option>FORKLIFT</option><option>BLOCKED_AISLE</option></select></label>
+        </div>
+      </details>
+    </div>
+  </aside>
+
+  <section class="center-stage">
+    <div class="center-head">
+      <div><div class="eyebrow">GRID SIMULATION · LIVE STATE</div><h1 id="map-title">Basic Fleet</h1></div>
+      <div class="map-toolbar-right"><div class="legend"><span><i class="legend-line"></i>Path</span><span><i class="legend-future"></i>Future occupancy</span><span><i class="legend-robot"></i>AMR</span></div><button id="zoom-out" aria-label="Zoom out">−</button><button id="fit" class="fit-btn">Fit</button><button id="zoom-in" aria-label="Zoom in">+</button></div>
+    </div>
+    <div id="metrics" class="metric-strip"></div>
+    <div class="map-card">
+      <div class="map-toolbar-mobile"><span class="live-map"><i></i> LIVE GRID STATE</span><span id="map-caption-state">READY</span></div>
+      <div class="map-wrap">
+        <canvas id="warehouse" aria-label="Interactive warehouse grid simulation"></canvas>
+        <div id="map-mode" class="map-mode">SELECT</div>
+        <div id="cell-tooltip" class="cell-tooltip hidden"></div>
+        <div id="conflict-card" class="conflict-card hidden"></div>
+        <div class="map-caption"><span class="map-caption-dot"></span><span>LIVE GRID STATE</span><b id="map-caption-state-2">READY</b></div><div class="map-legend"><span><b>P</b> Pickup</span><span><b>D</b> Dropoff</span><span><i class="cap-swatch"></i> Shelf end-cap</span></div>
+      </div>
+    </div>
+  </section>
+
+  <aside class="right-rail">
+    <div class="right-tabs" role="tablist" aria-label="Fleet information">
+      <button class="right-tab active" data-tab="fleet" role="tab">Fleet <span id="fleet-count">3</span></button>
+      <button class="right-tab" data-tab="missions" role="tab">Missions <span id="task-count">0</span></button>
+      <button class="right-tab" data-tab="inspector" role="tab">Inspector</button>
+    </div>
+    <section class="right-panel active" data-panel="fleet"><div class="panel-title"><span>FLEET STATUS</span><small>LIVE</small></div><div id="fleet-summary" class="fleet-summary"></div><div id="robots" class="robot-cards"></div></section>
+    <section class="right-panel" data-panel="missions"><div class="panel-title"><span>MISSION WORKLOAD</span><small>LIVE</small></div><div id="tasks" class="tasks"></div></section>
+    <section class="right-panel" data-panel="inspector"><div class="panel-title"><span>AMR INSPECTOR</span><small>READ ONLY</small></div><div id="inspector" class="inspector empty">Select an AMR on the map or fleet list.</div></section>
+  </aside>
+
+  <section class="event-card engineering-only" id="event-drawer">
+    <div class="event-head">
+      <div class="event-title"><span>EVENT JOURNAL</span><span class="event-count" id="event-count">0</span><small>LOCAL DECISIONS · WORLD EVENTS</small></div>
+      <div id="filters" class="filters"></div>
+      <button id="clear-log" class="ghost-btn">Clear</button>
+      <button id="journal-toggle" class="journal-toggle" aria-label="Expand event journal">⌃</button>
+    </div>
+    <div id="events" class="events"></div>
+  </section>
+</main>
+<script src="/static/app.js?v=dashboard-v1"></script>
+</body>
+</html>
