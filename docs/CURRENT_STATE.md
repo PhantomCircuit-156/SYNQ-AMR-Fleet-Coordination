@@ -27,10 +27,12 @@ Fixed the horizontal camera above the scene and added missing lights/background.
 
 Both fresh batch modes reproduce 85.696 s / 54.912 s makespans, 35.92% reduction, all physical goals and peer exchange passing, and zero safety-threshold breaches. Existing controller tests remain 7 passing. The portable GUI command is scripts/show_webots_demo.ps1 -Mode synq -Paused. See VISUAL_DEMO.md for camera values and evidence.
 
-## Dashboard presentation refresh — local review
+## Dashboard presentation refresh — pull request review
 
 Branch `dashboard-refresh` selectively imports the teammate's HTML, CSS and JavaScript into `dashboard/static/`. The existing Python grid backend supplies all data and actions. No Webots integration, coordination changes, simulation changes or benchmark-result changes are included.
 
 The screen explicitly identifies grid-simulation data. Small frontend fixes keep validation feedback visible, distinguish waiting from planning, synchronize run captions, hide disabled conflict overlays, remove the unused Safety checkbox and show an unknown collision count before the first snapshot.
 
-Validation: JavaScript syntax passes; all 12 existing dashboard API tests pass. An isolated browser verified three robot cards and live WebSocket rendering, step, play/pause, scenario switching, presentation mode and visible validation feedback. The final browser check reported no console errors. The frontend runs locally at http://127.0.0.1:8000 using the existing dashboard launch command. Public branch publication and pull-request review are the next step after local design review.
+Validation: JavaScript syntax passes; all 12 existing dashboard API tests pass. An isolated browser verified three robot cards and live WebSocket rendering, step, play/pause, scenario switching, presentation mode and visible validation feedback. The final browser check reported no console errors. The frontend runs locally at http://127.0.0.1:8000 using the existing dashboard launch command. The branch is published as pull request #1; local user review confirmed the dashboard works as expected. It has not been merged into master.
+
+Independent SIH review found and fixed two CSS layout defects: the presentation map was placed in a 70-pixel KPI row, and the canvas wrapper did not fill its map card. The map now fills the available space in both modes. Windows narrower than 1120 CSS pixels can scroll to side panels; presentation mode fits the window. Browser checks passed in both modes at 1366x768, 1920x1080 and 1024x768 with no page errors, and the captured presentation view was visually inspected. The full existing suite passes 76 tests. GitHub Actions checks are not configured for this pull request; these results are local verification. Webots and benchmark files remain identical to the published baseline.

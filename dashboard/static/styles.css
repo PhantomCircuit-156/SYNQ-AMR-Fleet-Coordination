@@ -92,7 +92,7 @@ button:hover:not(:disabled){transform:translateY(-1px)}
 .inspector.empty{padding:18px 10px;font-size:11px}.inspect-section{padding:9px 0;border-bottom:1px solid var(--border-soft)}.inspect-section h4{font-size:9px;color:var(--teal);letter-spacing:.11em}.inspect-grid{display:grid;grid-template-columns:1fr 1fr;gap:7px}.inspect-grid span{font-size:10px;color:var(--muted);display:flex;flex-direction:column;gap:2px}.inspect-grid b{font-size:11px;color:var(--text);font-family:"JetBrains Mono",ui-monospace,monospace;font-weight:600;overflow-wrap:anywhere}
 .event-card{background:#0a141d;border-top:1px solid var(--border);box-shadow:0 -8px 25px rgba(0,0,0,.14)}.event-head{height:46px;padding:0 12px}.event-title>span:first-child{font-size:11px}.event-title small{font-size:9px}.filters{gap:5px}.filters button{height:28px;min-height:28px;padding:0 9px;border:1px solid transparent;border-radius:7px;font-size:10px;font-weight:800}.filters button.active{background:#14242f;border-color:#2c4454;color:var(--text)}.event-head>.ghost-btn{height:28px;min-height:28px}.journal-toggle{height:28px;min-height:28px}.event-card.expanded{height:230px}.event-card.expanded .events{height:184px}.event-row{grid-template-columns:58px 60px 150px 1fr;padding:8px 12px;font-size:10px}.event-time{font-size:9px}.event-type{font-size:10px}.event-message{font-size:10px}
 /* Canvas UI hierarchy */
-.map-wrap{position:relative}.cell-tooltip{background:#0b151eF5;border-color:#344b5c;border-radius:8px;box-shadow:var(--shadow);font-size:10px}.conflict-card{background:#190f13;border:1px solid #6c2d36;box-shadow:var(--shadow);font-size:10px}
+.map-wrap{position:absolute;inset:0}.cell-tooltip{background:#0b151eF5;border-color:#344b5c;border-radius:8px;box-shadow:var(--shadow);font-size:10px}.conflict-card{background:#190f13;border:1px solid #6c2d36;box-shadow:var(--shadow);font-size:10px}
 @media(max-width:1450px){:root{--left:280px;--right:325px}.brand-block{min-width:285px}.brand-copy small{display:none}.metric strong{font-size:20px}.center-stage{padding:8px}.right-panel{padding:8px}}
 @media(max-width:1250px){body{min-width:1120px}:root{--left:265px;--right:310px}.top-center{display:none}.brand-block{min-width:260px}.metric{padding:8px}.metric strong{font-size:18px}.event-row{grid-template-columns:52px 52px 120px 1fr}}
 
@@ -100,3 +100,11 @@ button:hover:not(:disabled){transform:translateY(-1px)}
 #feedback { position: fixed; top: 76px; right: 16px; z-index: 50; width: min(420px, calc(100vw - 32px)); padding: 12px 16px; border: 1px solid var(--border); border-radius: 8px; background: var(--surface); box-shadow: var(--shadow); }
 #feedback:empty { display: none; }
 .safety-pill.pending .safety-dot { background: var(--muted); }
+
+/* Presentation has no KPI row; the map fills the remaining viewport. */
+body.presentation .center-stage { grid-template-rows: auto minmax(0, 1fr); }
+/* Smaller windows retain access to side panels instead of clipping them. */
+@media (max-width: 1119px) {
+  html, body { overflow-x: auto; }
+  body.presentation { min-width: 0; }
+}
