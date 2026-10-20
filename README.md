@@ -1,56 +1,92 @@
-# SYNQ
+# SYNQ — Decentralized AMR Fleet Coordination
 
-## Distributed Fleet Coordination for Autonomous Mobile Robots
+SYNQ is a decentralized multi-robot coordination prototype for autonomous mobile robots (AMRs) in smart warehouses. Robots exchange short-horizon intent and make local conflict decisions without relying on a central traffic controller.
 
-SYNQ is a lightweight decentralized coordination prototype where warehouse AMRs share short-horizon intent, resolve path conflicts locally, and coordinate shared spaces without relying on a single fleet-level traffic decision server.
+**SIH problem statement:** `SIH26123 — Edge-AI Based Distributed Fleet Coordination for Autonomous Mobile Robots (AMRs) in Smart Warehouses`
 
-## SIH Problem Statement
+> Scope: this prototype tests distributed coordination; it does not contain a machine-learning model. The grid simulator/dashboard and Webots benchmark are separate validation environments. Features in the grid simulator must not be presented as Webots-validated.
 
-**SIH26123 — Edge-AI Based Distributed Fleet Coordination for Autonomous Mobile Robots (AMRs) in Smart Warehouses.**
+## What it demonstrates
 
-This prototype tests distributed coordination. It does not contain a machine-learning model.
-
-## What This Prototype Demonstrates
-
-- Three physical MiR100 bodies move simultaneously in Webots R2025a.
-- Each runs the same Python controller with its own identity, start, goal, and priority.
-- Webots radio devices carry peer state and short-horizon intent between all three controllers.
-- Stop-and-Wait and SYNQ modes use the same world, starts, goals, planner, robot model, timestep, and speed limits.
-- Robot-local priority and yielding permit compatible routes through a shared region; a Supervisor measures time and safety-threshold breaches.
+- Three Cyberbotics MiR100 robot bodies in Webots R2025a.
+- Robot-local planning and peer intent exchange over simulated Webots Emitter/Receiver devices.
+- A controlled Stop-and-Wait versus SYNQ comparison.
+- A separate grid simulator and FastAPI dashboard for scenario interaction and observability.
+- Python tests and repeatable Webots benchmark scripts.
 
 ## Architecture
 
-~~~mermaid
+```mermaid
 flowchart TD
-    T[Task / goal] --> A[Robot-local RobotAgent]
-    A --> W[Local world state]
-    W --> P[Local A* route]
-    P --> I[Short-horizon intent]
-    I --> C[Robot-local conflict check]
-    C --> Y[Priority / wait / yield]
-    Y --> M[MiR100 wheel execution]
-    R1[R1] <-->|Webots radio intents| R2[R2]
-    R2 <-->|Webots radio intents| R3[R3]
-    R3 <-->|Webots radio intents| R1
-    S[Supervisor: metrics and emergency stop] -.-> R1
-    S -.-> R2
-    S -.-> R3
-~~~
+    A[Task / goal] --> B[Robot-local state]
+    B --> C[Local A* planning]
+    C --> D[Short-horizon intent]
+    D <--> E[Peer robots]
+    D --> F[Local conflict detection]
+    F --> G[Wait / yield / proceed]
+    G --> H[Robot execution]
+    H --> I[State and metrics update]
+```
 
-The Supervisor may stop robots when ground-truth separation breaches the threshold. It never chooses a route, conflict winner, or right of way. The Webots benchmark's small robot-local traffic policy lives in [benchmark_coordination.py](webots/controllers/synq_controller/benchmark_coordination.py); the existing RobotAgent supplies local A* planning and task state. See [architecture](docs/ARCHITECTURE.md).
+The dashboard controls and observes the grid simulator; it does not choose Webots right-of-way decisions. See [Architecture](docs/ARCHITECTURE.md).
 
-## Experimental Setup
+## Quick start (Windows)
 
-- **Webots:** R2025a, three Cyberbotics MiR100 robots, 32 ms physics timestep.
-- **Scenario:** two parallel crossing lanes and a third route through both conflict cells in [one world](webots/worlds/synq_three_robot.wbt).
-- **Controlled inputs:** identical starts, goals, robot models, speed limits, physics timestep, and route planner for both policies.
-- **Localization:** wheel-encoder odometry initialized from known starts; Supervisor ground-truth pose validates travel, arrival, and separation. Current prototype uses simulated localization / ground-truth robot pose for coordination evaluation. Sensor-based localization and obstacle perception are future work.
-- **Communication:** local simulated Webots Emitter/Receiver radio, with each robot receiving intent from both peers.
-- **Safety metric:** a detected breach is center separation below 0.65 m. This is not a physics-contact or real-world safety certification.
+Requirements: Python 3.11+ and Git. Install Webots R2025a separately if you want to run the Webots benchmark or visual demo.
 
-## Measured Results
+```powershell
+git clone https://github.com/PhantomCircuit-156/SYNQ-AMR-Fleet-Coordination.git
+cd SYNQ-AMR-Fleet-Coordination
+py -3.11 -m venv .venv
+.\.venv\Scripts\python.exe -m pip install --upgrade pip
+.\.venv\Scripts\python.exe -m pip install -e ".[dev]"
+```
 
-A reproducible Webots batch run from this repository on 2026-09-26 produced the following results. The Supervisor accepted the result only after all three bodies moved about 5.895 m, ended within 0.106 m of their goals, and each controller received intent from both peers.
+### Run tests
+
+```powershell
+.\.venv\Scripts\python.exe -m pytest -q
+```
+
+Run from the repository root and report the result from the current checkout.
+
+### Run the grid simulator/dashboard
+
+```powershell
+.\scripts\start_dashboard.bat
+```
+
+Alternative:
+
+```powershell
+.\.venv\Scripts\python.exe .\scripts\run_dashboard.py
+```
+
+Open http://127.0.0.1:8000. Keep the terminal open while using the dashboard; stop it with `Ctrl+C`. The dashboard is separate from the Webots traffic controller.
+
+### Run the Webots benchmark
+
+Install Webots R2025a. From the repository root:
+
+```powershell
+& '.\webots\controllers\synq_metrics\run_webots_experiment.ps1' -Mode baseline
+& '.\webots\controllers\synq_metrics\run_webots_experiment.ps1' -Mode synq
+& '.\webots\controllers\synq_metrics\run_webots_experiment.ps1' -Mode both
+```
+
+The runner searches under `%LOCALAPPDATA%\Programs\Webots`. If needed, set `WEBOTS_HOME` to the actual Webots installation directory. Webots supplies its own controller API; it is not a normal pip dependency.
+
+### Run the visual demo
+
+```powershell
+& '.\scripts\show_webots_demo.ps1' -Mode synq -Paused
+```
+
+Use `-Mode baseline` for the baseline demo. Press Run/real-time in Webots; close and relaunch to change modes. Use the batch runner for measured results and the GUI runner for visual demonstration. See [Visual Demo](docs/VISUAL_DEMO.md).
+
+## Reported Webots benchmark
+
+The repository reports a controlled batch run dated **2026-09-26**. Both modes use the same world, starts, goals, planner, robot model, timestep, and speed limits.
 
 | Metric | Stop-and-Wait | SYNQ |
 |---|---:|---:|
@@ -62,62 +98,40 @@ A reproducible Webots batch run from this repository on 2026-09-26 produced the 
 | Conflicts / yields | 2 / 2 | 1 / 1 |
 | Safety-threshold breaches | 0 | 0 |
 
-**35.92% reduction in makespan in the tested three-AMR benchmark scenario.**
+This is a **35.92% makespan reduction in the tested three-AMR scenario**, not a universal performance claim or real-world safety certification. The threshold is centre-to-centre separation below 0.65 m, not a physics-contact count. See [Experiment](docs/EXPERIMENT.md).
 
-Exact [baseline](webots/controllers/synq_metrics/baseline_result.json) and [SYNQ](webots/controllers/synq_metrics/synq_result.json) JSON records include units, per-robot physical travel, goal error, peer-exchange validation, and minimum separation. See the [experiment method](docs/EXPERIMENT.md).
+## Repository map
 
-## Success Criteria
-
-| Criterion | Result |
+| Path | Purpose |
 |---|---|
-| Zero detected inter-robot safety-threshold breaches | PASS in the tested runs |
-| At least 20% makespan reduction vs Stop-and-Wait | PASS — measured 35.92% in this scenario |
+| `coordination/` | Robot-local coordination |
+| `planning/` | Path planning |
+| `networking/` | Peer messaging |
+| `safety/` | Safety policies |
+| `tasks/` | Task lifecycle |
+| `simulation/` | Grid simulation |
+| `dashboard/` | Dashboard application |
+| `metrics/` | Metrics and reporting |
+| `tests/` | Automated tests |
+| `webots/` | Webots worlds and controllers |
+| `scripts/` | Launch and experiment scripts |
+| `docs/` | Architecture, experiment, demo and limitations |
+| `assets/` | Project media and instructions |
 
-Results are empirical for the tested simulation scenario and do not constitute a universal collision-safety guarantee.
+## Current limitations
 
-## How to Run
+Not yet validated in the Webots prototype: real Wi-Fi, sensor-based localization, SLAM, dynamic obstacle perception, ROS 2 deployment, physical AMR operation, or industrial-scale fleet performance. See [Limitations](docs/LIMITATIONS.md).
 
-On Windows, install Webots R2025a and Python 3.11+. From the repository root:
+## Documentation
 
-~~~powershell
-py -3.11 -m venv .venv
-.\.venv\Scripts\python.exe -m pip install -e ".[dev]"
-& '.\webots\controllers\synq_metrics\run_webots_experiment.ps1' -Mode baseline
-& '.\webots\controllers\synq_metrics\run_webots_experiment.ps1' -Mode synq
-& '.\webots\controllers\synq_metrics\run_webots_experiment.ps1' -Mode both
-~~~
-
-The runner searches for Webots under %LOCALAPPDATA%\Programs\Webots. Set WEBOTS_HOME to the Webots installation directory if needed. Webots supplies its own Python controller API; it is not a pip dependency. The runner starts a fresh world per mode and refuses stale, incomplete, physically invalid, or disconnected-peer results.
-
-For the GUI demo, launch the verified world with rendering enabled. Start paused so the full scene is visible before recording:
-
-~~~powershell
-& '.\scripts\show_webots_demo.ps1' -Mode synq -Paused
-# Use -Mode baseline for the comparison.
-~~~
-
-Press **Run / real-time** in Webots. The overhead camera frames all three robots, colored roof markers identify R1/red, R2/green, and R3/blue, and the yellow outline shows the shared region. Colored lines and goal squares are decorative only. The legend and console report state changes. Use real-time mode for recording; Fast mode is for benchmarking and may suppress rendering. The GUI launcher keeps manual runs from overwriting benchmark result files.
-
-Close and relaunch to change mode. See [visual demo details](docs/VISUAL_DEMO.md). The legacy single-R1 probe remains a different world.
-
-## What to Observe
-
-In SYNQ mode, red R1 and green R2 advance together through separate lanes; blue R3 yields, resumes, and completes. In baseline mode, region access is conservative, so R2 and R3 wait longer. The Supervisor console prints physical-goal and peer-exchange checks before reporting metrics. Do not manually move robots during a measured run.
-
-## Repository Scope
-
-**Current:** Webots simulation, three AMRs, known map, simulated localization, peer intent exchange, local intersection coordination, measured metrics, and the separate grid simulator/dashboard.
-
-**Not yet implemented in Webots:** real Wi-Fi networking, sensor-based localization, SLAM, dynamic obstacle perception, real AMR deployment, ROS 2 deployment, or industrial-scale validation. The dashboard is not the Webots traffic controller. See [limitations](docs/LIMITATIONS.md).
-
-## Future Work
-
-Packet-loss and stale-intent resilience; dynamic aisle blockage; distributed task reassignment; onboard sensor integration; a ROS 2 adapter; Raspberry Pi or Jetson edge deployment; and larger fleet benchmarks. The existing grid simulator has additional behaviors that are not claimed as Webots-validated here.
-
-## Media
-
-Genuine captures can later be added as assets/synq_demo.gif, assets/dashboard.png, and assets/webots_three_robot.png. These files are intentionally absent; see [assets instructions](assets/README.md).
+- [Getting Started](docs/GETTING_STARTED.md)
+- [Architecture](docs/ARCHITECTURE.md)
+- [Experiment](docs/EXPERIMENT.md)
+- [Visual Demo](docs/VISUAL_DEMO.md)
+- [Limitations](docs/LIMITATIONS.md)
+- [Asset instructions](assets/README.md)
+- [Changelog](CHANGELOG.md)
 
 ## License
 
-SYNQ-authored code is offered under the [MIT License](LICENSE). Cyberbotics Webots models referenced by the world and Python dependencies retain their own licenses.
+SYNQ-authored code is offered under the MIT License. Third-party models, libraries and dependencies retain their respective licenses. See [LICENSE](LICENSE).
